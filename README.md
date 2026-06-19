@@ -1,240 +1,244 @@
+<div align="center">
+
 # Job Matcher
 
-**Version:** `0.0.1`
+### Cansado de mandar currículo no escuro?
 
-Job Matcher is a free, bring-your-own-API desktop app that searches for job openings, compares each job with your resume/profile, sends the best matches by email, and suggests honest resume adjustments for each opportunity.
+O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores matches por e-mail — automaticamente, enquanto você faz outra coisa.
 
-This is an early `0.0.1` release. It already works as a local desktop assistant, but the project will keep improving over time.
+<br>
 
-## Repository Description
+[![Download Windows](https://img.shields.io/badge/⬇️%20Download%20para%20Windows-v0.0.1-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.1)
 
-AI-powered desktop job matcher that searches jobs, scores resume fit, emails best matches, and suggests targeted resume improvements using the user's own Groq, Serper, and Gmail credentials.
+*Gratuito · Sem instalação · Traga suas próprias APIs*
 
-## Suggested GitHub Topics
+</div>
 
-`job-search` `resume` `career-tools` `ai` `desktop-app` `python` `customtkinter` `groq` `serper` `gmail` `pyinstaller` `open-source`
+---
 
-## What It Does
+## Por que isso existe
 
-- Searches job openings through Google results using Serper.
-- Reads and filters job pages.
-- Builds a candidate profile from a TXT file and a PDF resume.
-- Uses Groq AI to score fit between the candidate and each job.
-- Sends the best matches by Gmail.
-- Generates resume guidance for each job:
-  - suggested resume headline.
-  - strengths to highlight.
-  - honest improvements to make the resume fit the job better.
-- Saves local reports in `reports/`.
-- Keeps a local cache to reduce repeated job alerts.
+Procurar emprego manualmente é frustrante por um motivo específico: você não sabe se a vaga vale seu tempo antes de ler tudo, pesquisar a empresa, montar a candidatura — e descobrir, depois de dias, que ela pedia Angular e você é backend.
 
-## Download The App
+Eu queria uma ferramenta que me dissesse:
 
-For normal users, download the Windows app from the GitHub release:
+> *"Essa vaga aqui tá boa — mas ela pede React e você é backend, então o fit real é 72%, não 90%. Já essa outra, a stack bate, o nível bate, e ainda dá pra melhorar seu currículo nesses dois pontos específicos."*
 
-```text
-Releases -> v0.0.1 -> JobMatcherApp.zip
+Não encontrei nada assim. Então construí.
+
+---
+
+## Download
+
+<div align="center">
+
+### ⬇️ [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.1)
+
+</div>
+
+```
+1. Baixe JobMatcherApp.zip na página de releases
+2. Extraia o zip
+3. Execute JobMatcherApp.exe
 ```
 
-After downloading, extract the zip and run:
+Não precisa instalar Python, Node, nem nada. Só baixar e rodar.
 
-```text
-JobMatcherApp.exe
+> **Requisito:** Windows 10 ou superior
+
+---
+
+## Interface
+
+### Painel principal
+![Painel de busca e monitoramento](assets/painel-principal.png)
+
+Configure quantas vagas analisar por varredura, defina o score mínimo de compatibilidade e o intervalo entre buscas. O log mostra só eventos relevantes — sem spam.
+
+---
+
+### Configuração de credenciais
+![Tela de configuração — credenciais e perfil](assets/configuracao-credenciais.png)
+
+Suas chaves de API e senha do Gmail são armazenadas com **DPAPI do Windows** — nunca em texto puro no disco.
+
+---
+
+### Configuração de perfil e filtros
+![Tela de configuração — áreas, senioridade e modalidade](assets/configuracao-filtros.png)
+
+Selecione as áreas, níveis de senioridade e modalidades de trabalho que fazem sentido pra você. O app só busca o que você quer.
+
+---
+
+### Filtros avançados
+![Tela de configuração — localização, empresas-alvo e queries](assets/configuracao-avancada.png)
+
+Filtros de localização aceitos, empresas-alvo opcionais e queries manuais extras para afinar ainda mais a busca.
+
+---
+
+## O que ele faz
+
+- Busca vagas no Google usando os termos e filtros que você configurar
+- Lê e filtra o conteúdo real das páginas de vaga
+- Calcula um **score de compatibilidade** entre a vaga e o seu currículo/perfil usando IA
+- Manda os melhores matches por **e-mail automaticamente** no intervalo definido
+- Gera uma **análise honesta por vaga**:
+  - pontos fortes do seu perfil para aquela posição
+  - o que não bate e por quê
+  - sugestões específicas para melhorar o currículo pra aquela vaga
+- Evita repetição com **cache local** de vagas já analisadas
+- Salva **relatórios locais** em `reports/` para consulta posterior
+
+---
+
+## Como funciona
+
+```
+Você configura os termos de busca e filtros
+              │
+              ▼
+    Serper busca vagas no Google
+              │
+              ▼
+   App lê o conteúdo real de cada vaga
+              │
+              ▼
+  Groq AI compara vaga × currículo × perfil
+              │
+              ▼
+   Score calculado → abaixo do mínimo, descarta
+              │
+              ▼
+  Melhores matches enviados por Gmail com análise
+              │
+              ▼
+  Relatório salvo + cache atualizado
 ```
 
-If you build it locally, the executable is generated at:
+---
 
-```text
-dist\JobMatcherApp\JobMatcherApp.exe
-```
+## O que você precisa fornecer
 
-## Requirements
+O app não cobra nada. Você traz suas próprias credenciais:
 
-The user provides their own credentials:
+| Credencial | Para que serve | Como obter |
+|---|---|---|
+| **Groq API Key** | IA que analisa as vagas | [console.groq.com/keys](https://console.groq.com/keys) — gratuito |
+| **Serper API Key** | Busca no Google | [serper.dev](https://serper.dev) — gratuito |
+| **Gmail + Senha de app** | Envio dos matches | [Instruções no guia](GUIA_USUARIO.md) |
+| **Arquivo de perfil (.txt)** | Seu perfil profissional | Você escreve |
+| **Currículo (.pdf)** | Base para o score de fit | Seu currículo atual |
 
-- Groq API key.
-- Serper API key.
-- Gmail account.
-- Gmail app password.
-- TXT profile file.
-- PDF resume.
+---
 
-No paid account is required by this project itself. External services may have their own free tiers, limits, and terms.
+## Primeiros passos
 
-## Quick Start For Users
+1. Abra `JobMatcherApp.exe`
+2. Clique em **Configurar**
+3. Preencha suas credenciais (Groq, Serper, Gmail)
+4. Selecione seu arquivo de perfil `.txt` e currículo `.pdf`
+5. Escolha as áreas, senioridades e modalidades desejadas
+6. Configure os filtros de localização e queries extras se quiser
+7. Clique em **Salvar configuração**
+8. Clique em **E-mail teste** para confirmar que está chegando
+9. Clique em **Varredura única** para testar uma vez
+10. Clique em **Iniciar** para monitoramento contínuo
 
-1. Open `JobMatcherApp.exe`.
-2. Click `Configurar`.
-3. Add your Groq API key.
-4. Add your Serper API key.
-5. Add your Gmail address.
-6. Add your Gmail app password.
-7. Add the destination email for job alerts.
-8. Select a `.txt` profile file.
-9. Select your resume PDF.
-10. Add main roles, stacks, or areas.
-11. Add seniority levels.
-12. Add work modes.
-13. Add accepted location filters.
-14. Add optional target companies.
-15. Add optional manual search queries.
-16. Click `Salvar configuracao`.
-17. Click `E-mail teste`.
-18. Click `Varredura unica` to test one scan.
-19. Click `Iniciar` to keep monitoring.
+Guia completo com prints passo a passo: [GUIA_USUARIO.md](GUIA_USUARIO.md)
 
-Full setup instructions are in [GUIA_USUARIO.md](GUIA_USUARIO.md).
+---
 
-## How To Get API Keys
+## Segurança
 
-### Groq
+Credenciais sensíveis (chaves de API e senha do Gmail) são protegidas com **DPAPI do Windows** antes de serem salvas — a proteção é vinculada ao seu usuário Windows.
 
-1. Go to `https://console.groq.com/keys`.
-2. Sign in or create an account.
-3. Create an API key.
-4. Paste it into `API de IA Groq`.
-
-Default model:
-
-```text
-llama-3.3-70b-versatile
-```
-
-### Serper
-
-1. Go to `https://serper.dev`.
-2. Create an account.
-3. Copy your API key.
-4. Paste it into `API Serper`.
-
-Serper is the main search provider. Without it, the main job search source will not work.
-
-### Gmail App Password
-
-This is not your normal Gmail password.
-
-1. Go to `https://myaccount.google.com/security`.
-2. Enable 2-Step Verification.
-3. Search for `App passwords`.
-4. Create an app password for Job Matcher.
-5. Copy the 16-character password.
-6. Paste it into `Senha de app do Gmail`.
-
-## Persistence
-
-Settings are saved outside the executable.
-
-Primary Windows location:
-
-```text
-%APPDATA%\JobMatcher\config.json
-%APPDATA%\JobMatcher\job_cache.json
-%APPDATA%\JobMatcher\documents\
-```
-
-Fallback portable location:
-
-```text
-user_data\config.json
-user_data\job_cache.json
-user_data\documents\
-```
-
-Selected TXT and PDF files are copied into the app data `documents` folder so the app can keep using them later.
-
-## Security
-
-Sensitive fields are:
-
-- Groq API key.
-- Serper API key.
-- Gmail app password.
-
-On Windows, these values are protected with DPAPI before being written to disk. That protection is tied to the logged-in Windows user.
-
-Do not publish or share:
-
+Nunca compartilhe ou publique:
 - `config.json`
 - `job_cache.json`
-- `user_data/`
-- `%APPDATA%\JobMatcher`
-- `job_matcher.log`
-- screenshots of the configuration window
+- A pasta `user_data/` ou `%APPDATA%\JobMatcher`
+- Prints da tela de configuração
 
-If a secret leaks, revoke it in Groq, Serper, or Google and generate a new one.
+Se alguma credencial vazar, revogue imediatamente em Groq, Serper ou Google e gere uma nova.
 
-## Duplicate Jobs And Local Memory
+---
 
-Job Matcher stores analyzed job IDs in `job_cache.json`.
+## Rodando pelo código-fonte
 
-This helps avoid repeated jobs while the cache exists and while job URLs/IDs remain stable.
-
-Current `0.0.1` limitations:
-
-- If `job_cache.json` is deleted, old jobs can appear again.
-- If the app is moved to another computer without the data folder, the job memory does not move with it.
-- If a job site changes the URL or ID, the same job may look new.
-- If the computer sleeps, shuts down, or loses internet, the app does not monitor during that time.
-- For continuous monitoring, keep the app open, the computer awake, and the internet connected.
-
-## Build From Source
-
-```powershell
+```bash
+git clone https://github.com/cherohn/job-matcher.git
+cd job-matcher
 pip install -r requirements.txt
 python app_desktop.py
 ```
 
-Build the Windows executable:
+Para gerar o executável:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
 ```
 
-Output:
+---
 
-```text
-dist\JobMatcherApp\JobMatcherApp.exe
+## Estrutura do projeto
+
 ```
-
-## Project Structure
-
-```text
 job-matcher/
-|-- app_desktop.py
-|-- main.py
-|-- config/
-|   `-- settings.py
-|-- core/
-|   |-- cache.py
-|   |-- matcher.py
-|   |-- report.py
-|   |-- resume_parser.py
-|   |-- secure_store.py
-|   `-- user_config.py
-|-- notifier/
-|   `-- email_notifier.py
-|-- scrapers/
-|-- GUIA_USUARIO.md
-|-- build_exe.ps1
-`-- requirements.txt
+├── app_desktop.py           # Interface desktop (CustomTkinter)
+├── main.py                  # Lógica principal de varredura
+├── config/
+│   └── settings.py          # Configurações globais
+├── core/
+│   ├── matcher.py           # Score de fit via Groq AI
+│   ├── resume_parser.py     # Leitura do currículo PDF
+│   ├── cache.py             # Cache de vagas já analisadas
+│   ├── report.py            # Geração de relatórios locais
+│   ├── secure_store.py      # Armazenamento seguro (DPAPI)
+│   └── user_config.py       # Gerenciamento de configurações
+├── notifier/
+│   └── email_notifier.py    # Envio de e-mail com os matches
+├── scrapers/                # Leitura e filtragem de páginas
+├── GUIA_USUARIO.md
+└── requirements.txt
 ```
+
+---
+
+## Limitações conhecidas (v0.0.1)
+
+- Monitoramento contínuo exige que o app fique aberto e o computador ligado
+- Cache local — se deletar `job_cache.json`, vagas antigas podem reaparecer
+- Proteção de credenciais com DPAPI funciona só no Windows por enquanto
+- Se um site de vagas mudar a URL, a mesma vaga pode parecer nova
+
+---
 
 ## Roadmap
 
-Planned improvements after `0.0.1`:
+- [ ] Instalador com setup guiado
+- [ ] Mais fontes de busca além do Google/Serper
+- [ ] Deduplicação mais robusta de vagas
+- [ ] Agendamento em background sem precisar manter o app aberto
+- [ ] Exportação de relatório em PDF
+- [ ] Suporte a credenciais seguras fora do Windows
 
-- Better installer experience.
-- More search providers.
-- Cleaner job deduplication.
-- Better resume export options.
-- Safer secret storage fallback outside Windows.
-- More transparent match explanations.
-- Optional background scheduling.
+---
 
-## Disclaimer
+## Aviso
 
-Job Matcher does not guarantee interviews, offers, or employment. It is a local assistant that helps users find relevant jobs and improve resume targeting using their own credentials and data.
+O Job Matcher não garante entrevistas, ofertas ou emprego. É um assistente local que ajuda a encontrar vagas relevantes e melhorar o direcionamento do currículo usando suas próprias credenciais e dados.
 
-## License
+---
 
-Add a license before publishing the repository publicly. MIT is a good default for this kind of tool if you want broad reuse.
+## Licença
+
+MIT — pode usar, modificar e distribuir livremente.
+
+---
+
+<div align="center">
+
+Feito por **Matheus Garcez** · [github.com/cherohn](https://github.com/cherohn) · [LinkedIn](https://linkedin.com/in/matheus-garcez-172377249)
+
+</div>
