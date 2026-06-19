@@ -8,36 +8,35 @@ from core.user_config import load_user_config
 
 
 DEFAULT_SEARCH_QUERIES = [
-    "Java Developer Junior",
-    "Java Backend Developer",
-    "Desenvolvedor Java",
-    "Programador Java",
-    "Spring Boot Developer",
-    "Java Spring Boot",
-    "Desenvolvedor Spring Boot",
-    "Backend Developer Junior",
-    "Desenvolvedor Backend Junior",
-    "Estagio Java",
-    "Trainee Java",
-    "Junior Software Engineer",
-    "Java Remoto",
-    "Java Backend Remoto",
-    "Spring Boot Remoto",
+    "Software Engineer",
+    "Backend Developer",
+    "Frontend Developer",
+    "Full Stack Developer",
+    "Data Analyst",
+    "Product Analyst",
+    "QA Analyst",
+    "DevOps Engineer",
 ]
 
 DEFAULT_SEARCH_BASE_TERMS = [
-    "Java",
-    "Java Backend",
-    "Spring Boot",
     "Backend",
+    "Frontend",
+    "Full Stack",
     "Software Engineer",
-    "Desenvolvedor Java",
+    "Data Analyst",
+    "Product Analyst",
+    "QA",
+    "DevOps",
     "Desenvolvedor Backend",
+    "Desenvolvedor Frontend",
+    "Analista de Dados",
 ]
 
 DEFAULT_SEARCH_SENIORITY_TERMS = [
     "Junior",
     "Jr",
+    "Pleno",
+    "Senior",
     "Estagio",
     "Estagiario",
     "Trainee",
@@ -46,6 +45,8 @@ DEFAULT_SEARCH_SENIORITY_TERMS = [
 DEFAULT_SEARCH_WORK_MODES = [
     "Remoto",
     "Home Office",
+    "Hibrido",
+    "Presencial",
 ]
 
 DEFAULT_LOCATION_FILTERS = [

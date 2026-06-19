@@ -330,8 +330,8 @@ class JobMatcherApp(ctk.CTk):
         add_entry("serper_api_key", "API Serper", secret=True)
         add_entry("email_remetente", "Gmail remetente")
         add_entry("email_senha_app", "Senha de app do Gmail", secret=True)
-        add_entry("email_destinatario", "E-mail que receberá os matches")
-        add_entry("location", "Localização da busca")
+        add_entry("email_destinatario", "E-mail que recebera os matches")
+        add_entry("location", "Pais/regiao principal da busca")
         if not fields["location"].get():
             fields["location"].set("Brasil")
 
@@ -377,24 +377,44 @@ class JobMatcherApp(ctk.CTk):
             ).grid(row=1, column=1, pady=(4, 0))
             row += 1
 
-        add_file_picker("profile_text_path", "Arquivo TXT com tudo que o usuário sabe sobre si", [("Texto", "*.txt"), ("Todos", "*.*")], "perfil.txt")
-        add_file_picker("resume_pdf_path", "Currículo em PDF", [("PDF", "*.pdf"), ("Todos", "*.*")], "curriculo.pdf")
+        add_file_picker("profile_text_path", "Arquivo TXT com tudo que o usuario sabe sobre si", [("Texto", "*.txt"), ("Todos", "*.*")], "perfil.txt")
+        add_file_picker("resume_pdf_path", "Curriculo em PDF", [("PDF", "*.pdf"), ("Todos", "*.*")], "curriculo.pdf")
 
-        text_frame = ctk.CTkFrame(body, fg_color="transparent")
-        text_frame.grid(row=row, column=0, sticky="ew", pady=(0, 10))
-        text_frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(text_frame, text="Termos de busca, um por linha", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
-        queries_box = ctk.CTkTextbox(text_frame, height=120, corner_radius=7, fg_color=BASE, border_color=BORDER, text_color=TEXT)
-        queries_box.grid(row=1, column=0, sticky="ew", pady=(4, 0))
-        queries = data.get("search_queries") or getattr(engine.settings, "SEARCH_QUERIES", [])
-        queries_box.insert("1.0", "\n".join(queries))
-        row += 1
+        multiline_boxes = {}
+
+        def add_list_box(key, label, default_attr, height=96):
+            nonlocal row
+            frame = ctk.CTkFrame(body, fg_color="transparent")
+            frame.grid(row=row, column=0, sticky="ew", pady=(0, 10))
+            frame.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+            box = ctk.CTkTextbox(
+                frame,
+                height=height,
+                corner_radius=7,
+                fg_color=BASE,
+                border_color=BORDER,
+                text_color=TEXT,
+            )
+            box.grid(row=1, column=0, sticky="ew", pady=(4, 0))
+            values = data.get(key) or getattr(engine.settings, default_attr, [])
+            box.insert("1.0", "\n".join(values))
+            multiline_boxes[key] = box
+            row += 1
+
+        add_list_box("search_base_terms", "Areas, cargos ou stacks principais", "SEARCH_BASE_TERMS")
+        add_list_box("search_seniority_terms", "Senioridade desejada", "SEARCH_SENIORITY_TERMS")
+        add_list_box("search_work_modes", "Modalidade de trabalho", "SEARCH_WORK_MODES")
+        add_list_box("job_location_filters", "Filtros de localizacao aceitos", "JOB_LOCATION_FILTERS")
+        add_list_box("target_companies", "Empresas alvo opcionais", "TARGET_COMPANIES", height=72)
+        add_list_box("search_queries", "Queries manuais extras", "SEARCH_QUERIES", height=120)
 
         def save_setup():
             payload = {key: var.get().strip() for key, var in fields.items()}
             payload["profile_text_path"] = path_vars["profile_text_path"].get().strip()
             payload["resume_pdf_path"] = path_vars["resume_pdf_path"].get().strip()
-            payload["search_queries"] = [line.strip() for line in queries_box.get("1.0", "end").splitlines() if line.strip()]
+            for key, box in multiline_boxes.items():
+                payload[key] = [line.strip() for line in box.get("1.0", "end").splitlines() if line.strip()]
             payload["min_score"] = self._parse_int(self.min_score, 90, 1, 100)
             payload["scan_interval_minutes"] = self._parse_int(self.interval, 60, 1, 720)
             payload["max_jobs_to_analyze_per_scan"] = self._parse_int(self.max_jobs, 25, 1, 200)

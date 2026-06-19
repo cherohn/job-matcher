@@ -72,11 +72,16 @@ No paid account is required by this project itself. External services may have t
 7. Add the destination email for job alerts.
 8. Select a `.txt` profile file.
 9. Select your resume PDF.
-10. Add search terms, one per line.
-11. Click `Salvar configuracao`.
-12. Click `E-mail teste`.
-13. Click `Varredura unica` to test one scan.
-14. Click `Iniciar` to keep monitoring.
+10. Add main roles, stacks, or areas.
+11. Add seniority levels.
+12. Add work modes.
+13. Add accepted location filters.
+14. Add optional target companies.
+15. Add optional manual search queries.
+16. Click `Salvar configuracao`.
+17. Click `E-mail teste`.
+18. Click `Varredura unica` to test one scan.
+19. Click `Iniciar` to keep monitoring.
 
 Full setup instructions are in [GUIA_USUARIO.md](GUIA_USUARIO.md).
 

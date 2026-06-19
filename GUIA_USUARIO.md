@@ -100,11 +100,99 @@ Quanto mais claro for esse arquivo, melhor a IA consegue comparar seu perfil com
 3. Preencha Groq, Serper, Gmail, senha de app e e-mail destino.
 4. Selecione o arquivo `.txt` do perfil.
 5. Selecione o PDF do curriculo.
-6. Edite os termos de busca, um por linha.
-7. Clique em `Salvar configuracao`.
-8. Clique em `E-mail teste` para confirmar se o envio funciona.
-9. Clique em `Varredura unica` para testar uma busca.
-10. Clique em `Iniciar` para deixar monitorando em intervalos.
+6. Edite as areas, cargos ou stacks principais, um por linha.
+7. Edite a senioridade desejada, um por linha.
+8. Edite a modalidade de trabalho, um por linha.
+9. Edite os filtros de localizacao aceitos, um por linha.
+10. Opcionalmente, informe empresas alvo.
+11. Opcionalmente, informe queries manuais extras.
+12. Clique em `Salvar configuracao`.
+13. Clique em `E-mail teste` para confirmar se o envio funciona.
+14. Clique em `Varredura unica` para testar uma busca.
+15. Clique em `Iniciar` para deixar monitorando em intervalos.
+
+## 7.1. Como preencher os campos de busca
+
+`Pais/regiao principal da busca` e usado como contexto geral da pesquisa. Exemplos:
+
+```text
+Brasil
+Portugal
+United States
+Sao Paulo
+Florianopolis
+Remote
+```
+
+`Areas, cargos ou stacks principais` define o centro da busca. Exemplos:
+
+```text
+Backend Developer
+Java
+Spring Boot
+Frontend Developer
+React
+Data Analyst
+Product Manager
+QA Analyst
+Mobile Developer
+```
+
+`Senioridade desejada` controla o nivel das vagas. Exemplos:
+
+```text
+Estagio
+Junior
+Pleno
+Senior
+Lead
+Trainee
+Entry Level
+```
+
+`Modalidade de trabalho` controla o formato desejado. Exemplos:
+
+```text
+Remoto
+Home Office
+Hibrido
+Presencial
+Remote
+On-site
+```
+
+`Filtros de localizacao aceitos` ajuda o sistema a descartar vagas fora do que voce aceita. Exemplos:
+
+```text
+remoto
+remote
+home office
+sao paulo
+florianopolis
+belo horizonte
+lisboa
+```
+
+`Empresas alvo opcionais` prioriza buscas por empresas especificas. Exemplos:
+
+```text
+Nubank
+Mercado Livre
+Itaú
+Google
+Microsoft
+```
+
+`Queries manuais extras` sao buscas prontas que voce quer forcar. Exemplos:
+
+```text
+Java Backend Pleno Remoto
+React Junior Remote
+Data Analyst Entry Level
+Product Manager Hibrido Sao Paulo
+```
+
+O sistema combina automaticamente areas, senioridade, modalidade e empresas para criar varias buscas. Por isso, nao precisa repetir tudo em todos os campos.
 
 ## 8. Onde as informacoes ficam salvas
 
