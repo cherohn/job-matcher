@@ -13,6 +13,7 @@ import customtkinter as ctk
 from PIL import Image
 
 import main as engine
+from core.report import save_manual_analysis_report
 from core.user_config import get_config_path, import_user_file, load_user_config, save_user_config
 
 
@@ -97,8 +98,8 @@ class JobMatcherApp(ctk.CTk):
 
         super().__init__(fg_color=BG)
         self.title("Job Matcher")
-        self.geometry("1000x640")
-        self.minsize(900, 560)
+        self.geometry("1120x720")
+        self.minsize(980, 620)
 
         self.messages = queue.Queue()
         self.stop_event = threading.Event()
@@ -110,6 +111,14 @@ class JobMatcherApp(ctk.CTk):
         self.min_score = tk.StringVar(value=str(engine.MIN_SCORE))
         self.status_text = tk.StringVar(value="Pronto")
         self.next_scan_text = tk.StringVar(value="-")
+        self.analysis_status = tk.StringVar(value="Cole uma vaga e clique em Analisar.")
+        self.analysis_title = tk.StringVar()
+        self.analysis_company = tk.StringVar()
+        self.analysis_worker = None
+        self.last_analysis_text = ""
+        self.nav_buttons = {}
+        self.tab_frames = {}
+        self.current_tab = "Busca"
 
         self._set_window_icon()
         self._configure_logging()
@@ -203,8 +212,36 @@ class JobMatcherApp(ctk.CTk):
             command=self._on_close,
         ).grid(row=9, column=0, padx=16, pady=(0, 20), sticky="ew")
 
-        main = ctk.CTkFrame(self, fg_color=BG, corner_radius=0)
-        main.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
+        content = ctk.CTkFrame(self, fg_color=BG, corner_radius=0)
+        content.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
+        content.grid_columnconfigure(0, weight=1)
+        content.grid_rowconfigure(0, weight=1)
+
+        shell = ctk.CTkFrame(content, fg_color=BG, corner_radius=0)
+        shell.grid(row=0, column=0, sticky="nsew", padx=18, pady=18)
+        shell.grid_columnconfigure(0, weight=1)
+        shell.grid_rowconfigure(1, weight=1)
+
+        nav = ctk.CTkFrame(shell, fg_color="transparent")
+        nav.grid(row=0, column=0, padx=26, pady=(0, 14), sticky="ew")
+        nav.grid_columnconfigure(2, weight=1)
+        self._nav_button(nav, 0, "Busca")
+        self._nav_button(nav, 1, "Analisar vaga")
+
+        tab_area = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0)
+        tab_area.grid(row=1, column=0, sticky="nsew")
+        tab_area.grid_columnconfigure(0, weight=1)
+        tab_area.grid_rowconfigure(0, weight=1)
+
+        search_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
+        analysis_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
+        self.tab_frames = {
+            "Busca": search_tab,
+            "Analisar vaga": analysis_tab,
+        }
+
+        main = search_tab
+        main.configure(fg_color=BG)
         main.grid_columnconfigure(0, weight=1)
         main.grid_rowconfigure(3, weight=1)
 
@@ -219,7 +256,7 @@ class JobMatcherApp(ctk.CTk):
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             header,
-            text="Controle varreduras, acompanhe eventos importantes e envie os melhores matches por e-mail.",
+            text="Configure a varredura, execute buscas pontuais e acompanhe os eventos importantes.",
             font=("Segoe UI", 13),
             text_color=MUTED,
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
@@ -227,6 +264,10 @@ class JobMatcherApp(ctk.CTk):
         settings = ctk.CTkFrame(main, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
         settings.grid(row=1, column=0, padx=26, pady=(0, 16), sticky="ew")
         settings.grid_columnconfigure((0, 1, 2), weight=1)
+        settings.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(settings, text="Parametros da varredura", font=("Segoe UI", 15, "bold"), text_color=TEXT).grid(
+            row=0, column=0, columnspan=3, padx=14, pady=(14, 0), sticky="w"
+        )
         self._number_field(settings, 0, "Vagas por varredura", self.max_jobs)
         self._number_field(settings, 1, "Score minimo", self.min_score)
         self._number_field(settings, 2, "Intervalo (min)", self.interval)
@@ -234,8 +275,8 @@ class JobMatcherApp(ctk.CTk):
         actions = ctk.CTkFrame(main, fg_color="transparent")
         actions.grid(row=2, column=0, padx=26, pady=(0, 16), sticky="ew")
         actions.grid_columnconfigure((0, 1, 2, 3), weight=1)
-        self._action_button(actions, 0, "Iniciar", self.start_monitoring, primary=True)
-        self._action_button(actions, 1, "Varredura unica", self.run_once)
+        self._action_button(actions, 0, "Iniciar monitoramento", self.start_monitoring, primary=True)
+        self._action_button(actions, 1, "Buscar agora", self.run_once)
         self._action_button(actions, 2, "Parar", self.stop_monitoring, danger=True)
         self._action_button(actions, 3, "E-mail teste", self.send_test_email)
 
@@ -247,8 +288,8 @@ class JobMatcherApp(ctk.CTk):
         log_header = ctk.CTkFrame(log_panel, fg_color="transparent")
         log_header.grid(row=0, column=0, padx=18, pady=(16, 8), sticky="ew")
         log_header.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(log_header, text="Atividade", font=("Segoe UI", 17, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w")
-        ctk.CTkLabel(log_header, text="Somente eventos relevantes", font=("Segoe UI", 12), text_color=MUTED).grid(row=1, column=0, sticky="w")
+        ctk.CTkLabel(log_header, text="Atividade da busca", font=("Segoe UI", 17, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(log_header, text="Eventos filtrados para mostrar apenas o que importa.", font=("Segoe UI", 12), text_color=MUTED).grid(row=1, column=0, sticky="w")
         ctk.CTkButton(
             log_header,
             text="Limpar",
@@ -276,6 +317,203 @@ class JobMatcherApp(ctk.CTk):
         self.log_box.grid(row=1, column=0, padx=18, pady=(0, 18), sticky="nsew")
         self.log_box.insert("end", "Pronto. Configure a busca e clique em Iniciar ou Varredura unica.\n")
         self.log_box.configure(state="disabled")
+
+        self._build_analysis_tab(analysis_tab)
+        self._show_tab("Busca")
+
+    def _nav_button(self, parent, column, name):
+        button = ctk.CTkButton(
+            parent,
+            text=name,
+            height=38,
+            width=132 if name == "Analisar vaga" else 86,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=BORDER,
+            font=("Segoe UI", 12, "bold"),
+            command=lambda: self._show_tab(name),
+        )
+        button.grid(row=0, column=column, padx=(0, 8), sticky="w")
+        self.nav_buttons[name] = button
+
+    def _show_tab(self, name):
+        for frame in self.tab_frames.values():
+            frame.grid_forget()
+        self.tab_frames[name].grid(row=0, column=0, sticky="nsew")
+        self.current_tab = name
+
+        for tab_name, button in self.nav_buttons.items():
+            if tab_name == name:
+                button.configure(
+                    fg_color=ACCENT,
+                    hover_color=ACCENT_DIM,
+                    text_color=BG,
+                    border_color=ACCENT,
+                )
+            else:
+                button.configure(
+                    fg_color=SURFACE,
+                    hover_color=SURFACE_2,
+                    text_color=TEXT,
+                    border_color=BORDER,
+                )
+
+    def _build_analysis_tab(self, parent):
+        parent.configure(fg_color=BG)
+        parent.grid_columnconfigure(0, weight=6)
+        parent.grid_columnconfigure(1, weight=5)
+        parent.grid_rowconfigure(1, weight=1)
+
+        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header.grid(row=0, column=0, columnspan=2, padx=26, pady=(26, 16), sticky="ew")
+        header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            header,
+            text="Analisar vaga",
+            font=("Segoe UI", 26, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            header,
+            textvariable=self.analysis_status,
+            font=("Segoe UI", 13),
+            text_color=MUTED,
+        ).grid(row=1, column=0, pady=(6, 0), sticky="w")
+
+        form = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        form.grid(row=1, column=0, padx=(26, 10), pady=(0, 24), sticky="nsew")
+        form.grid_columnconfigure((0, 1), weight=1)
+        form.grid_rowconfigure(3, weight=1)
+
+        ctk.CTkLabel(
+            form,
+            text="Dados da vaga",
+            font=("Segoe UI", 17, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, columnspan=2, padx=18, pady=(18, 2), sticky="w")
+        ctk.CTkLabel(
+            form,
+            text="Cole a descricao completa. Titulo e empresa ajudam, mas sao opcionais.",
+            font=("Segoe UI", 12),
+            text_color=MUTED,
+        ).grid(row=1, column=0, columnspan=2, padx=18, pady=(0, 12), sticky="w")
+
+        self._text_field(form, 2, 0, "Titulo da vaga", self.analysis_title)
+        self._text_field(form, 2, 1, "Empresa", self.analysis_company)
+
+        desc_frame = ctk.CTkFrame(form, fg_color="transparent")
+        desc_frame.grid(row=3, column=0, columnspan=2, padx=18, pady=(0, 14), sticky="nsew")
+        desc_frame.grid_columnconfigure(0, weight=1)
+        desc_frame.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(desc_frame, text="Descricao da vaga", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        self.analysis_description = ctk.CTkTextbox(
+            desc_frame,
+            height=260,
+            corner_radius=7,
+            fg_color=BG,
+            border_width=1,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 12),
+            wrap="word",
+        )
+        self.analysis_description.grid(row=1, column=0, sticky="nsew", pady=(6, 0))
+
+        actions = ctk.CTkFrame(form, fg_color="transparent")
+        actions.grid(row=4, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
+        actions.grid_columnconfigure((0, 1, 2), weight=1)
+        self.analyze_button = ctk.CTkButton(
+            actions,
+            text="Analisar compatibilidade",
+            height=38,
+            corner_radius=8,
+            fg_color=ACCENT,
+            hover_color=ACCENT_DIM,
+            text_color=BG,
+            command=self.analyze_single_job,
+        )
+        self.analyze_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        ctk.CTkButton(
+            actions,
+            text="Copiar analise",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            command=self.copy_analysis,
+        ).grid(row=0, column=1, sticky="ew", padx=(0, 8))
+        ctk.CTkButton(
+            actions,
+            text="Limpar",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            command=self.clear_analysis,
+        ).grid(row=0, column=2, sticky="ew")
+
+        result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
+        result_panel.grid_columnconfigure(0, weight=1)
+        result_panel.grid_rowconfigure(1, weight=1)
+        result_header = ctk.CTkFrame(result_panel, fg_color="transparent")
+        result_header.grid(row=0, column=0, padx=18, pady=(18, 8), sticky="ew")
+        result_header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            result_header,
+            text="Resultado",
+            font=("Segoe UI", 17, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            result_header,
+            text="Diagnostico, nao geracao de curriculo.",
+            font=("Segoe UI", 12),
+            text_color=MUTED,
+        ).grid(row=1, column=0, sticky="w")
+
+        self.analysis_result_box = ctk.CTkTextbox(
+            result_panel,
+            corner_radius=8,
+            fg_color=BG,
+            border_width=1,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 12),
+            wrap="word",
+        )
+        self.analysis_result_box.grid(row=1, column=0, padx=18, pady=(0, 18), sticky="nsew")
+        self.analysis_result_box.insert(
+            "end",
+            "A analise vai aparecer aqui.\n\n"
+            "O app vai mostrar compatibilidade, pontos fortes, gaps e melhorias recomendadas para o curriculo atual.\n",
+        )
+        self.analysis_result_box.configure(state="disabled")
+
+    def _text_field(self, parent, row, column, label, variable):
+        frame = ctk.CTkFrame(parent, fg_color="transparent")
+        frame.grid(row=row, column=column, padx=14, pady=14, sticky="ew")
+        frame.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        ctk.CTkEntry(
+            frame,
+            textvariable=variable,
+            height=36,
+            corner_radius=7,
+            fg_color=BG,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 13),
+        ).grid(row=1, column=0, sticky="ew", pady=(6, 0))
 
     def open_setup_window(self):
         data = load_user_config()
@@ -323,8 +561,8 @@ class JobMatcherApp(ctk.CTk):
             ).grid(row=1, column=0, sticky="ew", pady=(4, 0))
             row += 1
 
-        add_entry("groq_api_key", "API de IA Groq", secret=True)
-        add_entry("groq_model", "Modelo Groq")
+        add_entry("groq_api_key", "API da IA", secret=True)
+        add_entry("groq_model", "Modelo da IA")
         if not fields["groq_model"].get():
             fields["groq_model"].set("llama-3.3-70b-versatile")
         add_entry("serper_api_key", "API Serper", secret=True)
@@ -382,12 +620,19 @@ class JobMatcherApp(ctk.CTk):
 
         multiline_boxes = {}
 
-        def add_list_box(key, label, default_attr, height=96):
+        def add_list_box(key, label, default_attr, height=96, help_text=None):
             nonlocal row
             frame = ctk.CTkFrame(body, fg_color="transparent")
             frame.grid(row=row, column=0, sticky="ew", pady=(0, 10))
             frame.grid_columnconfigure(0, weight=1)
             ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+            if help_text:
+                ctk.CTkLabel(
+                    frame,
+                    text=help_text,
+                    text_color=MUTED,
+                    font=("Segoe UI", 11),
+                ).grid(row=1, column=0, sticky="w", pady=(2, 0))
             box = ctk.CTkTextbox(
                 frame,
                 height=height,
@@ -396,7 +641,7 @@ class JobMatcherApp(ctk.CTk):
                 border_color=BORDER,
                 text_color=TEXT,
             )
-            box.grid(row=1, column=0, sticky="ew", pady=(4, 0))
+            box.grid(row=2 if help_text else 1, column=0, sticky="ew", pady=(4, 0))
             values = data.get(key) or getattr(engine.settings, default_attr, [])
             box.insert("1.0", "\n".join(values))
             multiline_boxes[key] = box
@@ -406,7 +651,13 @@ class JobMatcherApp(ctk.CTk):
         add_list_box("search_seniority_terms", "Senioridade desejada", "SEARCH_SENIORITY_TERMS")
         add_list_box("search_work_modes", "Modalidade de trabalho", "SEARCH_WORK_MODES")
         add_list_box("job_location_filters", "Filtros de localizacao aceitos", "JOB_LOCATION_FILTERS")
-        add_list_box("target_companies", "Empresas alvo opcionais", "TARGET_COMPANIES", height=72)
+        add_list_box(
+            "target_companies",
+            "Empresas alvo opcionais",
+            "TARGET_COMPANIES",
+            height=72,
+            help_text="Deixe vazio para verificar vagas de todas as empresas.",
+        )
         add_list_box("search_queries", "Queries manuais extras", "SEARCH_QUERIES", height=120)
 
         def save_setup():
@@ -460,7 +711,7 @@ class JobMatcherApp(ctk.CTk):
 
     def _number_field(self, parent, column, label, variable):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.grid(row=0, column=column, padx=14, pady=14, sticky="ew")
+        frame.grid(row=1, column=column, padx=14, pady=14, sticky="ew")
         ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).pack(anchor="w")
         ctk.CTkEntry(
             frame,
@@ -564,10 +815,104 @@ class JobMatcherApp(ctk.CTk):
         self.worker = threading.Thread(target=self._send_email_worker, daemon=True)
         self.worker.start()
 
+    def analyze_single_job(self):
+        if self.analysis_worker and self.analysis_worker.is_alive():
+            messagebox.showinfo("Job Matcher", "A analise atual ainda esta em execucao.")
+            return
+
+        description = self.analysis_description.get("1.0", "end").strip()
+        if len(description) < 80:
+            messagebox.showinfo("Job Matcher", "Cole uma descricao de vaga mais completa antes de analisar.")
+            return
+
+        self.analysis_status.set("Analisando esta vaga com IA...")
+        self.analyze_button.configure(state="disabled", text="Analisando...")
+        self.analysis_worker = threading.Thread(
+            target=self._analysis_worker,
+            args=(self.analysis_title.get().strip(), self.analysis_company.get().strip(), description),
+            daemon=True,
+        )
+        self.analysis_worker.start()
+
+    def clear_analysis(self):
+        self.analysis_title.set("")
+        self.analysis_company.set("")
+        self.analysis_description.delete("1.0", "end")
+        self.last_analysis_text = ""
+        self.analysis_status.set("Cole uma vaga e clique em Analisar.")
+        self._set_analysis_result(
+            "A analise vai aparecer aqui.\n\n"
+            "O app vai mostrar compatibilidade, pontos fortes, gaps e melhorias recomendadas para o curriculo atual.\n"
+        )
+
+    def copy_analysis(self):
+        if not self.last_analysis_text:
+            messagebox.showinfo("Job Matcher", "Ainda nao ha analise para copiar.")
+            return
+        self.clipboard_clear()
+        self.clipboard_append(self.last_analysis_text)
+        self.analysis_status.set("Analise copiada para a area de transferencia.")
+
     def open_reports_folder(self):
         path = os.path.abspath("reports")
         os.makedirs(path, exist_ok=True)
         os.startfile(path)
+
+    def _analysis_worker(self, title, company, description):
+        try:
+            result = engine.analyze_manual_job(title, company, description)
+            if result is None:
+                raise ValueError("A IA nao retornou uma analise valida para esta vaga.")
+            report_json, report_md = save_manual_analysis_report(title, company, description, result)
+            output = self._format_analysis(title, company, result, report_md)
+            self.last_analysis_text = output
+            self.after(0, self._set_analysis_result, output)
+            self.after(0, self.analysis_status.set, f"Analise concluida e salva em reports/{report_md.name}.")
+        except Exception as exc:
+            self.after(0, messagebox.showerror, "Job Matcher", str(exc))
+            self.after(0, self.analysis_status.set, "Nao foi possivel analisar esta vaga.")
+        finally:
+            self.after(0, lambda: self.analyze_button.configure(state="normal", text="Analisar compatibilidade"))
+
+    def _format_analysis(self, title, company, result, report_path=None):
+        lines = []
+        heading = title or "Vaga analisada"
+        if company:
+            heading = f"{heading} @ {company}"
+        lines.append(heading)
+        lines.append("")
+        lines.append(f"Score: {result.score}%")
+        lines.append(f"Prioridade de ajuste: {result.prioridade_ajuste}")
+        if result.veredito:
+            lines.append(f"Veredito: {result.veredito}")
+        lines.append("")
+        self._append_section(lines, "Pontos fortes para esta vaga", result.pontos_fortes)
+        self._append_section(lines, "Pontos fracos ou gaps", result.pontos_fracos)
+        self._append_section(lines, "Melhorias recomendadas no curriculo", result.melhorias_curriculo)
+        self._append_section(lines, "Itens que podem perder destaque nesta candidatura", result.itens_menos_relevantes)
+        if result.proxima_acao:
+            lines.append("Proxima acao")
+            lines.append(f"- {result.proxima_acao}")
+            lines.append("")
+        if report_path:
+            lines.append("Relatorio salvo")
+            lines.append(f"- {report_path}")
+        return "\n".join(lines).strip() + "\n"
+
+    def _append_section(self, lines, title, items):
+        lines.append(title)
+        if items:
+            for item in items:
+                lines.append(f"- {item}")
+        else:
+            lines.append("- Nenhum ponto especifico identificado.")
+        lines.append("")
+
+    def _set_analysis_result(self, text):
+        self.analysis_result_box.configure(state="normal")
+        self.analysis_result_box.delete("1.0", "end")
+        self.analysis_result_box.insert("end", text)
+        self.analysis_result_box.configure(state="disabled")
 
     def _scan_once_worker(self):
         self._set_status("Varredura unica")

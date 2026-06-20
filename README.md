@@ -2,15 +2,17 @@
 
 # Job Matcher
 
-### Cansado de mandar currículo no escuro?
+### Cansado de mandar curriculo no escuro?
 
-O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores matches por e-mail — automaticamente, enquanto você faz outra coisa.
+**Versao:** `0.0.2`
+
+O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores matches por e-mail automaticamente, enquanto voce faz outra coisa.
 
 <br>
 
-[![Download Windows](https://img.shields.io/badge/⬇️%20Download%20para%20Windows-v0.0.1-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.1)
+[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.2-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.2)
 
-*Gratuito · Sem instalação · Traga suas próprias APIs*
+*Gratuito · Sem instalacao · Traga suas proprias APIs*
 
 </div>
 
@@ -18,13 +20,13 @@ O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores 
 
 ## Por que isso existe
 
-Procurar emprego manualmente é frustrante por um motivo específico: você não sabe se a vaga vale seu tempo antes de ler tudo, pesquisar a empresa, montar a candidatura — e descobrir, depois de dias, que ela pedia Angular e você é backend.
+Procurar emprego manualmente e frustrante por um motivo especifico: voce nao sabe se a vaga vale seu tempo antes de ler tudo, pesquisar a empresa, montar a candidatura e descobrir, depois de dias, que ela pedia Angular e voce e backend.
 
 Eu queria uma ferramenta que me dissesse:
 
-> *"Essa vaga aqui tá boa — mas ela pede React e você é backend, então o fit real é 72%, não 90%. Já essa outra, a stack bate, o nível bate, e ainda dá pra melhorar seu currículo nesses dois pontos específicos."*
+> "Essa vaga aqui esta boa, mas ela pede React e voce e backend, entao o fit real e 72%, nao 90%. Ja essa outra, a stack bate, o nivel bate, e ainda da para melhorar seu curriculo nesses dois pontos especificos."
 
-Não encontrei nada assim. Então construí.
+Nao encontrei nada assim. Entao construi.
 
 ---
 
@@ -32,17 +34,17 @@ Não encontrei nada assim. Então construí.
 
 <div align="center">
 
-### ⬇️ [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.1)
+### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.2)
 
 </div>
 
-```
-1. Baixe JobMatcherApp.zip na página de releases
+```text
+1. Baixe JobMatcherApp.zip na pagina de releases
 2. Extraia o zip
 3. Execute JobMatcherApp.exe
 ```
 
-Não precisa instalar Python, Node, nem nada. Só baixar e rodar.
+Nao precisa instalar Python, Node, nem nada. So baixar e rodar.
 
 > **Requisito:** Windows 10 ou superior
 
@@ -53,127 +55,163 @@ Não precisa instalar Python, Node, nem nada. Só baixar e rodar.
 ### Painel principal
 ![Painel de busca e monitoramento](assets/painel-principal.png)
 
-Configure quantas vagas analisar por varredura, defina o score mínimo de compatibilidade e o intervalo entre buscas. O log mostra só eventos relevantes — sem spam.
+Configure quantas vagas analisar por varredura, defina o score minimo de compatibilidade e o intervalo entre buscas. O log mostra so eventos relevantes, sem spam.
 
 ---
 
-### Configuração de credenciais
-![Tela de configuração — credenciais e perfil](assets/configuracao-credenciais.png)
+### Configuracao de credenciais
+![Tela de configuracao - credenciais e perfil](assets/configuracao-credenciais.png)
 
-Suas chaves de API e senha do Gmail são armazenadas com **DPAPI do Windows** — nunca em texto puro no disco.
-
----
-
-### Configuração de perfil e filtros
-![Tela de configuração — áreas, senioridade e modalidade](assets/configuracao-filtros.png)
-
-Selecione as áreas, níveis de senioridade e modalidades de trabalho que fazem sentido pra você. O app só busca o que você quer.
+Suas chaves de API e senha do Gmail sao armazenadas com **DPAPI do Windows**, nunca em texto puro no disco.
 
 ---
 
-### Filtros avançados
-![Tela de configuração — localização, empresas-alvo e queries](assets/configuracao-avancada.png)
+### Configuracao de perfil e filtros
+![Tela de configuracao - areas, senioridade e modalidade](assets/configuracao-filtros.png)
 
-Filtros de localização aceitos, empresas-alvo opcionais e queries manuais extras para afinar ainda mais a busca.
+Selecione as areas, niveis de senioridade e modalidades de trabalho que fazem sentido para voce. O app so busca o que voce quer.
+
+---
+
+### Filtros avancados
+![Tela de configuracao - localizacao, empresas-alvo e queries](assets/configuracao-avancada.png)
+
+Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras para afinar ainda mais a busca.
 
 ---
 
 ## O que ele faz
 
-- Busca vagas no Google usando os termos e filtros que você configurar
-- Lê e filtra o conteúdo real das páginas de vaga
-- Calcula um **score de compatibilidade** entre a vaga e o seu currículo/perfil usando IA
-- Manda os melhores matches por **e-mail automaticamente** no intervalo definido
-- Gera uma **análise honesta por vaga**:
-  - pontos fortes do seu perfil para aquela posição
-  - o que não bate e por quê
-  - sugestões específicas para melhorar o currículo pra aquela vaga
-- Evita repetição com **cache local** de vagas já analisadas
-- Salva **relatórios locais** em `reports/` para consulta posterior
+- Busca vagas no Google usando os termos e filtros que voce configurar.
+- Le e filtra o conteudo real das paginas de vaga.
+- Calcula um **score de compatibilidade** entre a vaga e o seu curriculo/perfil usando IA.
+- Manda os melhores matches por **e-mail automaticamente** no intervalo definido.
+- Analisa uma vaga colada manualmente na aba **Analisar vaga**.
+- Salva analises manuais em JSON e Markdown dentro de `reports/`.
+- Gera uma **analise honesta por vaga**:
+  - pontos fortes do seu perfil para aquela posicao;
+  - o que nao bate e por que;
+  - sugestoes especificas para melhorar o curriculo para aquela vaga.
+- Evita repeticao com **cache local** de vagas ja analisadas.
+- Salva **relatorios locais** em `reports/` para consulta posterior.
+
+A analise manual nao cria um novo curriculo. Ela apenas explica o que melhorar, destacar, reduzir ou verificar no curriculo atual.
 
 ---
 
 ## Como funciona
 
-```
-Você configura os termos de busca e filtros
-              │
-              ▼
+```text
+Voce configura os termos de busca e filtros
+              |
+              v
     Serper busca vagas no Google
-              │
-              ▼
-   App lê o conteúdo real de cada vaga
-              │
-              ▼
-  Groq AI compara vaga × currículo × perfil
-              │
-              ▼
-   Score calculado → abaixo do mínimo, descarta
-              │
-              ▼
-  Melhores matches enviados por Gmail com análise
-              │
-              ▼
-  Relatório salvo + cache atualizado
+              |
+              v
+   App le o conteudo real de cada vaga
+              |
+              v
+  IA compara vaga x curriculo x perfil
+              |
+              v
+   Score calculado -> abaixo do minimo, descarta
+              |
+              v
+  Melhores matches enviados por Gmail com analise
+              |
+              v
+  Relatorio salvo + cache atualizado
 ```
 
 ---
 
-## O que você precisa fornecer
+## O que voce precisa fornecer
 
-O app não cobra nada. Você traz suas próprias credenciais:
+O app nao cobra nada. Voce traz suas proprias credenciais:
 
 | Credencial | Para que serve | Como obter |
 |---|---|---|
-| **Groq API Key** | IA que analisa as vagas | [console.groq.com/keys](https://console.groq.com/keys) — gratuito |
-| **Serper API Key** | Busca no Google | [serper.dev](https://serper.dev) — gratuito |
-| **Gmail + Senha de app** | Envio dos matches | [Instruções no guia](GUIA_USUARIO.md) |
-| **Arquivo de perfil (.txt)** | Seu perfil profissional | Você escreve |
-| **Currículo (.pdf)** | Base para o score de fit | Seu currículo atual |
+| **API da IA** | IA que analisa as vagas | [console.groq.com/keys](https://console.groq.com/keys) |
+| **Serper API Key** | Busca no Google | [serper.dev](https://serper.dev) |
+| **Gmail + senha de app** | Envio dos matches | [Instrucoes no guia](GUIA_USUARIO.md) |
+| **Arquivo de perfil (.txt)** | Seu perfil profissional | Voce escreve |
+| **Curriculo (.pdf)** | Base para o score de fit | Seu curriculo atual |
+
+Modelo padrao da IA:
+
+```text
+llama-3.3-70b-versatile
+```
 
 ---
 
 ## Primeiros passos
 
-1. Abra `JobMatcherApp.exe`
-2. Clique em **Configurar**
-3. Preencha suas credenciais (Groq, Serper, Gmail)
-4. Selecione seu arquivo de perfil `.txt` e currículo `.pdf`
-5. Escolha as áreas, senioridades e modalidades desejadas
-6. Configure os filtros de localização e queries extras se quiser
-7. Clique em **Salvar configuração**
-8. Clique em **E-mail teste** para confirmar que está chegando
-9. Clique em **Varredura única** para testar uma vez
-10. Clique em **Iniciar** para monitoramento contínuo
+1. Abra `JobMatcherApp.exe`.
+2. Clique em **Configurar**.
+3. Preencha suas credenciais de IA, Serper e Gmail.
+4. Selecione seu arquivo de perfil `.txt` e curriculo `.pdf`.
+5. Escolha as areas, senioridades e modalidades desejadas.
+6. Configure os filtros de localizacao e queries extras se quiser.
+7. Clique em **Salvar configuracao**.
+8. Clique em **E-mail teste** para confirmar que esta chegando.
+9. Clique em **Buscar agora** para testar uma vez.
+10. Clique em **Iniciar monitoramento** para monitoramento continuo.
 
 Guia completo com prints passo a passo: [GUIA_USUARIO.md](GUIA_USUARIO.md)
 
 ---
 
-## Segurança
+## Persistencia
 
-Credenciais sensíveis (chaves de API e senha do Gmail) são protegidas com **DPAPI do Windows** antes de serem salvas — a proteção é vinculada ao seu usuário Windows.
+As configuracoes sao salvas fora do executavel.
+
+Local principal no Windows:
+
+```text
+%APPDATA%\JobMatcher\config.json
+%APPDATA%\JobMatcher\job_cache.json
+%APPDATA%\JobMatcher\documents\
+```
+
+Fallback portatil:
+
+```text
+user_data\config.json
+user_data\job_cache.json
+user_data\documents\
+```
+
+Arquivos TXT e PDF selecionados sao copiados para a pasta `documents` do app para continuar funcionando depois.
+
+---
+
+## Seguranca
+
+Credenciais sensiveis sao protegidas com **DPAPI do Windows** antes de serem salvas. A protecao e vinculada ao seu usuario Windows.
 
 Nunca compartilhe ou publique:
+
 - `config.json`
 - `job_cache.json`
 - A pasta `user_data/` ou `%APPDATA%\JobMatcher`
-- Prints da tela de configuração
+- Prints da tela de configuracao
+- `job_matcher.log`
 
 Se alguma credencial vazar, revogue imediatamente em Groq, Serper ou Google e gere uma nova.
 
 ---
 
-## Rodando pelo código-fonte
+## Rodando pelo codigo-fonte
 
-```bash
+```powershell
 git clone https://github.com/cherohn/job-matcher.git
 cd job-matcher
 pip install -r requirements.txt
 python app_desktop.py
 ```
 
-Para gerar o executável:
+Para gerar o executavel:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
@@ -183,57 +221,61 @@ powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
 
 ## Estrutura do projeto
 
-```
+```text
 job-matcher/
-├── app_desktop.py           # Interface desktop (CustomTkinter)
-├── main.py                  # Lógica principal de varredura
-├── config/
-│   └── settings.py          # Configurações globais
-├── core/
-│   ├── matcher.py           # Score de fit via Groq AI
-│   ├── resume_parser.py     # Leitura do currículo PDF
-│   ├── cache.py             # Cache de vagas já analisadas
-│   ├── report.py            # Geração de relatórios locais
-│   ├── secure_store.py      # Armazenamento seguro (DPAPI)
-│   └── user_config.py       # Gerenciamento de configurações
-├── notifier/
-│   └── email_notifier.py    # Envio de e-mail com os matches
-├── scrapers/                # Leitura e filtragem de páginas
-├── GUIA_USUARIO.md
-└── requirements.txt
+|-- app_desktop.py
+|-- main.py
+|-- config/
+|   `-- settings.py
+|-- core/
+|   |-- cache.py
+|   |-- job_analyzer.py
+|   |-- matcher.py
+|   |-- report.py
+|   |-- resume_parser.py
+|   |-- secure_store.py
+|   `-- user_config.py
+|-- notifier/
+|   `-- email_notifier.py
+|-- scrapers/
+|-- GUIA_USUARIO.md
+|-- build_exe.ps1
+`-- requirements.txt
 ```
 
 ---
 
-## Limitações conhecidas (v0.0.1)
+## Limitacoes conhecidas (v0.0.2)
 
-- Monitoramento contínuo exige que o app fique aberto e o computador ligado
-- Cache local — se deletar `job_cache.json`, vagas antigas podem reaparecer
-- Proteção de credenciais com DPAPI funciona só no Windows por enquanto
-- Se um site de vagas mudar a URL, a mesma vaga pode parecer nova
+- Monitoramento continuo exige que o app fique aberto e o computador ligado.
+- Cache local: se deletar `job_cache.json`, vagas antigas podem reaparecer.
+- Protecao de credenciais com DPAPI funciona so no Windows por enquanto.
+- Se um site de vagas mudar a URL, a mesma vaga pode parecer nova.
+- A aba **Analisar vaga** orienta melhorias, mas ainda nao gera uma versao otimizada do curriculo.
 
 ---
 
 ## Roadmap
 
-- [ ] Instalador com setup guiado
-- [ ] Mais fontes de busca além do Google/Serper
-- [ ] Deduplicação mais robusta de vagas
-- [ ] Agendamento em background sem precisar manter o app aberto
-- [ ] Exportação de relatório em PDF
-- [ ] Suporte a credenciais seguras fora do Windows
+- [ ] Aba **Otimizar curriculo** para a versao `0.0.3`.
+- [ ] Instalador com setup guiado.
+- [ ] Mais fontes de busca alem do Google/Serper.
+- [ ] Deduplicacao mais robusta de vagas.
+- [ ] Agendamento em background sem precisar manter o app aberto.
+- [ ] Exportacao de relatorio em PDF.
+- [ ] Suporte a credenciais seguras fora do Windows.
 
 ---
 
 ## Aviso
 
-O Job Matcher não garante entrevistas, ofertas ou emprego. É um assistente local que ajuda a encontrar vagas relevantes e melhorar o direcionamento do currículo usando suas próprias credenciais e dados.
+O Job Matcher nao garante entrevistas, ofertas ou emprego. E um assistente local que ajuda a encontrar vagas relevantes e melhorar o direcionamento do curriculo usando suas proprias credenciais e dados.
 
 ---
 
-## Licença
+## Licenca
 
-MIT — pode usar, modificar e distribuir livremente.
+MIT - pode usar, modificar e distribuir livremente.
 
 ---
 

@@ -1,4 +1,6 @@
 import json
+import re
+import unicodedata
 from dataclasses import asdict, is_dataclass
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +18,19 @@ def _plain(value: Any) -> Any:
     if isinstance(value, dict):
         return {key: _plain(item) for key, item in value.items()}
     return value
+
+
+def _slug(text: str) -> str:
+    text = unicodedata.normalize("NFKD", text or "")
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    text = re.sub(r"[^a-zA-Z0-9]+", "-", text).strip("-").lower()
+    return text[:60] or "vaga"
+
+
+def _md_list(items: list[str]) -> list[str]:
+    if not items:
+        return ["- Nenhum ponto especifico identificado."]
+    return [f"- {item}" for item in items]
 
 
 def save_scan_report(
@@ -67,6 +82,75 @@ def save_scan_report(
             f"- Ajustes no curriculo: {'; '.join(item.get('curriculo_ajustes', [])) if item.get('curriculo_ajustes') else 'Nao gerado'}",
             "",
         ])
+
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+    return json_path, md_path
+
+
+def save_manual_analysis_report(
+    job_title: str,
+    job_company: str,
+    job_description: str,
+    analysis: Any,
+) -> Tuple[Path, Path]:
+    REPORT_DIR.mkdir(exist_ok=True)
+    now = datetime.now()
+    stamp = now.strftime("%Y%m%d-%H%M%S")
+    name = _slug(f"{job_company}-{job_title}")
+    json_path = REPORT_DIR / f"manual-{stamp}-{name}.json"
+    md_path = REPORT_DIR / f"manual-{stamp}-{name}.md"
+
+    analysis_data = _plain(analysis)
+    payload = {
+        "created_at": now.isoformat(timespec="seconds"),
+        "type": "manual_job_analysis",
+        "job": {
+            "title": job_title or "Nao informado",
+            "company": job_company or "Nao informada",
+            "description": job_description,
+        },
+        "analysis": analysis_data,
+    }
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    lines = [
+        "# Analise Manual de Vaga",
+        "",
+        f"- Criada em: {now.strftime('%d/%m/%Y %H:%M')}",
+        f"- Vaga: {job_title or 'Nao informado'}",
+        f"- Empresa: {job_company or 'Nao informada'}",
+        f"- Score: {analysis_data.get('score', 0)}%",
+        f"- Prioridade de ajuste: {analysis_data.get('prioridade_ajuste', 'media')}",
+        "",
+        "## Veredito",
+        "",
+        analysis_data.get("veredito") or "Nao informado.",
+        "",
+        "## Pontos Fortes",
+        "",
+        *_md_list(analysis_data.get("pontos_fortes", [])),
+        "",
+        "## Pontos Fracos ou Gaps",
+        "",
+        *_md_list(analysis_data.get("pontos_fracos", [])),
+        "",
+        "## Melhorias Recomendadas no Curriculo",
+        "",
+        *_md_list(analysis_data.get("melhorias_curriculo", [])),
+        "",
+        "## Itens que Podem Perder Destaque",
+        "",
+        *_md_list(analysis_data.get("itens_menos_relevantes", [])),
+        "",
+        "## Proxima Acao",
+        "",
+        analysis_data.get("proxima_acao") or "Nao informada.",
+        "",
+        "## Descricao da Vaga",
+        "",
+        job_description,
+        "",
+    ]
 
     md_path.write_text("\n".join(lines), encoding="utf-8")
     return json_path, md_path

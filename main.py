@@ -20,6 +20,7 @@ from scrapers.indeed_scraper import fetch_indeed_jobs
 from scrapers.vagas_scraper import fetch_vagas_jobs
 from scrapers.linkedin_scraper import fetch_linkedin_jobs
 from scrapers.google_scraper import fetch_google_jobs
+from core.job_analyzer import analyze_single_job
 from core.matcher import calculate_match
 from core.query_builder import build_search_queries
 from core.resume_parser import build_profile
@@ -121,6 +122,27 @@ def get_search_queries():
         companies=getattr(settings, "TARGET_COMPANIES", []),
         manual_queries=SEARCH_QUERIES,
         max_queries=getattr(settings, "MAX_SEARCH_QUERIES_PER_SOURCE", 50),
+    )
+
+def analyze_manual_job(job_title, job_company, job_description):
+    refresh_runtime_settings()
+    if not GROQ_API_KEY:
+        raise ValueError("Configure a API de IA Groq antes de analisar uma vaga.")
+    if not PROFILE:
+        reload_profile()
+    if not PROFILE:
+        raise ValueError("Configure um curriculo PDF, TXT de perfil ou texto de perfil antes de analisar.")
+    if not job_description or len(job_description.strip()) < 80:
+        raise ValueError("Cole uma descricao de vaga mais completa antes de analisar.")
+
+    return analyze_single_job(
+        profile_text=PROFILE,
+        job_title=job_title,
+        job_company=job_company,
+        job_description=job_description,
+        groq_api_key=GROQ_API_KEY,
+        model_name=GROQ_MODEL,
+        use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
     )
 
 def run_scan(max_jobs_override=None, should_stop=None):

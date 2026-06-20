@@ -36,7 +36,7 @@ Voce precisa de:
 3. Clique para criar uma nova API key.
 4. Copie a chave gerada.
 5. No Job Matcher, clique em `Configurar`.
-6. Cole a chave no campo `API de IA Groq`.
+6. Cole a chave no campo `API da IA`.
 
 O modelo padrao usado pelo app e `llama-3.3-70b-versatile`.
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.2
+
+- Added a desktop tab to analyze one pasted job description at a time.
+- The manual analysis compares the configured resume/profile against only that job.
+- Added professional guidance focused on strengths, gaps, resume improvements, less relevant items, and next action.
+- Kept resume generation out of this flow; the feature only recommends what to improve or emphasize.
+- Manual job analyses are saved as JSON and Markdown reports in `reports/`.
+
 ## 0.0.1
 
 Initial public release.
