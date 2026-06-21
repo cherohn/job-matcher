@@ -20,8 +20,9 @@ from scrapers.indeed_scraper import fetch_indeed_jobs
 from scrapers.vagas_scraper import fetch_vagas_jobs
 from scrapers.linkedin_scraper import fetch_linkedin_jobs
 from scrapers.google_scraper import fetch_google_jobs
-from core.job_analyzer import analyze_single_job
+from core.job_analyzer import SingleJobAnalysis
 from core.matcher import calculate_match
+from core.resume_optimizer import optimize_resume_for_job
 from core.query_builder import build_search_queries
 from core.resume_parser import build_profile
 from core.user_config import is_configured, load_user_config
@@ -127,7 +128,7 @@ def get_search_queries():
 def analyze_manual_job(job_title, job_company, job_description):
     refresh_runtime_settings()
     if not GROQ_API_KEY:
-        raise ValueError("Configure a API de IA Groq antes de analisar uma vaga.")
+        raise ValueError("Configure a API da IA antes de analisar uma vaga.")
     if not PROFILE:
         reload_profile()
     if not PROFILE:
@@ -135,7 +136,7 @@ def analyze_manual_job(job_title, job_company, job_description):
     if not job_description or len(job_description.strip()) < 80:
         raise ValueError("Cole uma descricao de vaga mais completa antes de analisar.")
 
-    return analyze_single_job(
+    result = calculate_match(
         profile_text=PROFILE,
         job_title=job_title,
         job_company=job_company,
@@ -143,6 +144,45 @@ def analyze_manual_job(job_title, job_company, job_description):
         groq_api_key=GROQ_API_KEY,
         model_name=GROQ_MODEL,
         use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
+    )
+
+def optimize_manual_resume(job_title, job_company, job_description):
+    refresh_runtime_settings()
+    if not GROQ_API_KEY:
+        raise ValueError("Configure a API da IA antes de otimizar o curriculo.")
+    if not PROFILE:
+        reload_profile()
+    if not PROFILE:
+        raise ValueError("Configure um curriculo PDF, TXT de perfil ou texto de perfil antes de otimizar.")
+    if not job_description or len(job_description.strip()) < 80:
+        raise ValueError("Cole uma descricao de vaga mais completa antes de otimizar.")
+
+    return optimize_resume_for_job(
+        profile_text=PROFILE,
+        job_title=job_title,
+        job_company=job_company,
+        job_description=job_description,
+        groq_api_key=GROQ_API_KEY,
+        model_name=GROQ_MODEL,
+        use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
+    )
+    if result is None:
+        return None
+
+    return SingleJobAnalysis(
+        score=result.score,
+        veredito=result.resumo,
+        pontos_fortes=result.pontos_fortes,
+        pontos_fracos=result.gaps,
+        melhorias_curriculo=result.curriculo_ajustes,
+        itens_menos_relevantes=[
+            "Informacoes que nao reforcam os requisitos principais desta vaga podem receber menos destaque.",
+            "Priorize no topo do curriculo os pontos listados em foco e pontos fortes.",
+        ],
+        prioridade_ajuste="alta" if result.score < 70 else "media" if result.score < 85 else "baixa",
+        proxima_acao=(
+            "Ajustar o resumo e os primeiros bullets do curriculo usando os pontos fortes e ajustes honestos acima."
+        ),
     )
 
 def run_scan(max_jobs_override=None, should_stop=None):

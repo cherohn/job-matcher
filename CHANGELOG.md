@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.3
+
+- Added the **Otimizar curriculo** desktop tab.
+- Added AI guidance for targeted resume positioning from a pasted job description.
+- Generates suggested headline, professional summary, priority skills, priority experiences, suggested bullets, items to reduce, missing evidence, and honesty warnings.
+- Resume optimization reports are saved as JSON and Markdown in `reports/`.
+- The optimizer does not export DOCX/PDF and must not invent experience, technologies, certifications, jobs, or projects.
+
 ## 0.0.2
 
 - Added a desktop tab to analyze one pasted job description at a time.

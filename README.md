@@ -4,13 +4,13 @@
 
 ### Cansado de mandar curriculo no escuro?
 
-**Versao:** `0.0.2`
+**Versao:** `0.0.3`
 
 O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores matches por e-mail automaticamente, enquanto voce faz outra coisa.
 
 <br>
 
-[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.2-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.2)
+[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.3-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.3)
 
 *Gratuito · Sem instalacao · Traga suas proprias APIs*
 
@@ -34,7 +34,7 @@ Nao encontrei nada assim. Entao construi.
 
 <div align="center">
 
-### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.2)
+### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.3)
 
 </div>
 
@@ -88,6 +88,8 @@ Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras
 - Manda os melhores matches por **e-mail automaticamente** no intervalo definido.
 - Analisa uma vaga colada manualmente na aba **Analisar vaga**.
 - Salva analises manuais em JSON e Markdown dentro de `reports/`.
+- Otimiza o direcionamento do curriculo para uma vaga especifica na aba **Otimizar curriculo**.
+- Salva otimizacoes de curriculo em JSON e Markdown dentro de `reports/`.
 - Gera uma **analise honesta por vaga**:
   - pontos fortes do seu perfil para aquela posicao;
   - o que nao bate e por que;
@@ -96,6 +98,8 @@ Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras
 - Salva **relatorios locais** em `reports/` para consulta posterior.
 
 A analise manual nao cria um novo curriculo. Ela apenas explica o que melhorar, destacar, reduzir ou verificar no curriculo atual.
+
+A otimizacao de curriculo sugere headline, resumo, skills e bullets com base no perfil existente. Ela nao inventa experiencias e ainda nao exporta DOCX/PDF.
 
 ---
 
@@ -245,19 +249,19 @@ job-matcher/
 
 ---
 
-## Limitacoes conhecidas (v0.0.2)
+## Limitacoes conhecidas (v0.0.3)
 
 - Monitoramento continuo exige que o app fique aberto e o computador ligado.
 - Cache local: se deletar `job_cache.json`, vagas antigas podem reaparecer.
 - Protecao de credenciais com DPAPI funciona so no Windows por enquanto.
 - Se um site de vagas mudar a URL, a mesma vaga pode parecer nova.
-- A aba **Analisar vaga** orienta melhorias, mas ainda nao gera uma versao otimizada do curriculo.
+- A aba **Otimizar curriculo** gera texto e relatorio, mas ainda nao exporta DOCX/PDF.
 
 ---
 
 ## Roadmap
 
-- [ ] Aba **Otimizar curriculo** para a versao `0.0.3`.
+- [ ] Exportacao DOCX/PDF para curriculos otimizados.
 - [ ] Instalador com setup guiado.
 - [ ] Mais fontes de busca alem do Google/Serper.
 - [ ] Deduplicacao mais robusta de vagas.

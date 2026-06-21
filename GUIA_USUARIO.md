@@ -4,7 +4,7 @@ Este guia explica como instalar, configurar, usar e entender o Job Matcher.
 
 ## 1. O que o sistema faz
 
-O Job Matcher procura vagas usando Google via Serper, le as paginas encontradas, compara cada vaga com o perfil do usuario usando IA da Groq e envia por e-mail os melhores resultados.
+O Job Matcher procura vagas usando Google via Serper, le as paginas encontradas, compara cada vaga com o perfil do usuario usando IA e envia por e-mail os melhores resultados.
 
 Para cada vaga analisada, ele gera:
 
@@ -17,6 +17,13 @@ Para cada vaga analisada, ele gera:
 - ajustes honestos para deixar o curriculo mais profissional para aquela vaga.
 
 O sistema nao cria candidatura automaticamente e nao garante contratacao. Ele ajuda a encontrar vagas melhores e a adaptar o curriculo com base no que o usuario realmente sabe.
+
+Na interface desktop, tambem existem abas para uso manual:
+
+- `Analisar vaga`: cola uma vaga especifica e recebe um diagnostico de compatibilidade.
+- `Otimizar curriculo`: cola uma vaga especifica e recebe sugestoes de headline, resumo, skills e bullets baseadas no curriculo/perfil atual.
+
+A otimizacao nao deve inventar experiencia. Ela serve para reposicionar e reescrever melhor o que ja existe.
 
 ## 2. O que precisa antes de usar
 
@@ -97,7 +104,7 @@ Quanto mais claro for esse arquivo, melhor a IA consegue comparar seu perfil com
 
 1. Abra `JobMatcherApp.exe`.
 2. Clique em `Configurar`.
-3. Preencha Groq, Serper, Gmail, senha de app e e-mail destino.
+3. Preencha IA, Serper, Gmail, senha de app e e-mail destino.
 4. Selecione o arquivo `.txt` do perfil.
 5. Selecione o PDF do curriculo.
 6. Edite as areas, cargos ou stacks principais, um por linha.
@@ -108,8 +115,8 @@ Quanto mais claro for esse arquivo, melhor a IA consegue comparar seu perfil com
 11. Opcionalmente, informe queries manuais extras.
 12. Clique em `Salvar configuracao`.
 13. Clique em `E-mail teste` para confirmar se o envio funciona.
-14. Clique em `Varredura unica` para testar uma busca.
-15. Clique em `Iniciar` para deixar monitorando em intervalos.
+14. Clique em `Buscar agora` para testar uma busca.
+15. Clique em `Iniciar monitoramento` para deixar monitorando em intervalos.
 
 ## 7.1. Como preencher os campos de busca
 
@@ -194,6 +201,26 @@ Product Manager Hibrido Sao Paulo
 
 O sistema combina automaticamente areas, senioridade, modalidade e empresas para criar varias buscas. Por isso, nao precisa repetir tudo em todos os campos.
 
+## 7.2. Como usar as abas manuais
+
+Na aba `Analisar vaga`:
+
+1. Cole a descricao completa da vaga.
+2. Informe titulo e empresa se quiser.
+3. Clique em `Analisar compatibilidade`.
+4. O app mostra score, pontos fortes, gaps, melhorias recomendadas e proxima acao.
+5. A analise tambem e salva em `reports/` como JSON e Markdown.
+
+Na aba `Otimizar curriculo`:
+
+1. Cole a descricao completa da vaga.
+2. Informe titulo e empresa se quiser.
+3. Clique em `Gerar otimizacao`.
+4. O app sugere headline, resumo profissional, skills prioritarias, experiencias para priorizar, bullets sugeridos, itens para reduzir e avisos de honestidade.
+5. A otimizacao tambem e salva em `reports/` como JSON e Markdown.
+
+Use os botoes de copiar para levar o texto para um editor de curriculo. Revise tudo antes de usar.
+
 ## 8. Onde as informacoes ficam salvas
 
 As configuracoes sao persistentes.
@@ -220,7 +247,7 @@ O arquivo `config.json` guarda a configuracao. Os arquivos selecionados pelo usu
 
 As chaves sensiveis sao:
 
-- API key da Groq.
+- API da IA.
 - API key do Serper.
 - senha de app do Gmail.
 
@@ -261,7 +288,7 @@ Em resumo: a memoria local ajuda a evitar repeticao, mas ela depende do arquivo 
 4. O sistema baixa e filtra paginas de vagas.
 5. Vagas repetidas sao ignoradas usando `job_cache.json`.
 6. O perfil do usuario e montado com TXT + PDF.
-7. A Groq analisa perfil contra descricao da vaga.
+7. A IA analisa perfil contra descricao da vaga.
 8. O score e limitado por regras conservadoras para evitar exagero.
 9. Resultados acima do score minimo entram no resumo.
 10. O app salva relatorios em `reports`.
@@ -279,6 +306,8 @@ core/resume_parser.py          Le TXT e PDF.
 core/matcher.py                Calcula match e sugestoes de curriculo.
 notifier/email_notifier.py     Envia e-mails.
 reports/                       Relatorios das varreduras.
+core/job_analyzer.py           Analise manual de uma vaga.
+core/resume_optimizer.py       Otimizacao de curriculo para uma vaga.
 ```
 
 ## 13. Problemas comuns

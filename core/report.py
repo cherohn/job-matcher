@@ -154,3 +154,82 @@ def save_manual_analysis_report(
 
     md_path.write_text("\n".join(lines), encoding="utf-8")
     return json_path, md_path
+
+
+def save_resume_optimization_report(
+    job_title: str,
+    job_company: str,
+    job_description: str,
+    optimization: Any,
+) -> Tuple[Path, Path]:
+    REPORT_DIR.mkdir(exist_ok=True)
+    now = datetime.now()
+    stamp = now.strftime("%Y%m%d-%H%M%S")
+    name = _slug(f"{job_company}-{job_title}")
+    json_path = REPORT_DIR / f"optimized-{stamp}-{name}.json"
+    md_path = REPORT_DIR / f"optimized-{stamp}-{name}.md"
+
+    optimization_data = _plain(optimization)
+    payload = {
+        "created_at": now.isoformat(timespec="seconds"),
+        "type": "resume_optimization",
+        "job": {
+            "title": job_title or "Nao informado",
+            "company": job_company or "Nao informada",
+            "description": job_description,
+        },
+        "optimization": optimization_data,
+    }
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    lines = [
+        "# Otimizacao de Curriculo",
+        "",
+        f"- Criada em: {now.strftime('%d/%m/%Y %H:%M')}",
+        f"- Vaga: {job_title or 'Nao informado'}",
+        f"- Empresa: {job_company or 'Nao informada'}",
+        "",
+        "## Headline Sugerida",
+        "",
+        optimization_data.get("headline_sugerida") or "Nao gerada.",
+        "",
+        "## Resumo Profissional Sugerido",
+        "",
+        optimization_data.get("resumo_profissional_sugerido") or "Nao gerado.",
+        "",
+        "## Skills Prioritarias",
+        "",
+        *_md_list(optimization_data.get("skills_prioritarias", [])),
+        "",
+        "## Experiencias ou Projetos para Priorizar",
+        "",
+        *_md_list(optimization_data.get("experiencias_prioritarias", [])),
+        "",
+        "## Bullets Sugeridos",
+        "",
+        *_md_list(optimization_data.get("bullets_sugeridos", [])),
+        "",
+        "## Reduzir ou Remover Destaque",
+        "",
+        *_md_list(optimization_data.get("reduzir_ou_remover", [])),
+        "",
+        "## Evidencias Ausentes",
+        "",
+        *_md_list(optimization_data.get("evidencias_ausentes", [])),
+        "",
+        "## Avisos de Honestidade",
+        "",
+        *_md_list(optimization_data.get("avisos_honestidade", [])),
+        "",
+        "## Proxima Acao",
+        "",
+        optimization_data.get("proxima_acao") or "Nao informada.",
+        "",
+        "## Descricao da Vaga",
+        "",
+        job_description,
+        "",
+    ]
+
+    md_path.write_text("\n".join(lines), encoding="utf-8")
+    return json_path, md_path

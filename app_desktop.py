@@ -1,5 +1,6 @@
 """Modern desktop launcher for Job Matcher."""
 
+import ctypes
 import logging
 import os
 import queue
@@ -13,7 +14,7 @@ import customtkinter as ctk
 from PIL import Image
 
 import main as engine
-from core.report import save_manual_analysis_report
+from core.report import REPORT_DIR, save_manual_analysis_report, save_resume_optimization_report
 from core.user_config import get_config_path, import_user_file, load_user_config, save_user_config
 
 
@@ -44,7 +45,10 @@ def friendly_log_message(level, message):
     if "varredura" in low and "/" in clean:
         return "Nova varredura iniciada."
     if "queries ativas" in low:
-        return clean.replace("Queries ativas", "Buscas preparadas")
+        count = clean.split(":", 1)[-1].strip()
+        return f"Aguarde. {count} pesquisas serao feitas no Google/Serper."
+    if "aguarde" in low:
+        return clean
     if "google/serper:" in low and "vagas" in low:
         return clean.replace("Google/Serper:", "Google:")
     if "total coletado" in low:
@@ -58,7 +62,9 @@ def friendly_log_message(level, message):
     if "descricao insuficiente" in low:
         return "Vaga ignorada: descricao insuficiente."
     if "relatorio salvo" in low:
-        return "Relatorio salvo em reports/."
+        return clean
+    if "abrindo pasta de relatorios" in low:
+        return clean
     if "enviando resumo" in low:
         return "Enviando e-mail com os melhores matches."
     if "resumo enviado" in low:
@@ -116,6 +122,12 @@ class JobMatcherApp(ctk.CTk):
         self.analysis_company = tk.StringVar()
         self.analysis_worker = None
         self.last_analysis_text = ""
+        self.last_job_context = None
+        self.optimization_status = tk.StringVar(value="Cole uma vaga e gere uma otimizacao.")
+        self.optimization_title = tk.StringVar()
+        self.optimization_company = tk.StringVar()
+        self.optimization_worker = None
+        self.last_optimization_text = ""
         self.nav_buttons = {}
         self.tab_frames = {}
         self.current_tab = "Busca"
@@ -138,6 +150,35 @@ class JobMatcherApp(ctk.CTk):
                 self.iconphoto(True, self._icon_photo)
         except tk.TclError:
             pass
+        self._apply_dark_title_bar(self)
+
+    def _apply_dark_title_bar(self, window):
+        if sys.platform != "win32":
+            return
+        try:
+            window.update_idletasks()
+            hwnd = ctypes.windll.user32.GetParent(window.winfo_id()) or window.winfo_id()
+            enabled = ctypes.c_int(1)
+            for attribute in (20, 19):
+                result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    ctypes.c_void_p(hwnd),
+                    ctypes.c_int(attribute),
+                    ctypes.byref(enabled),
+                    ctypes.sizeof(enabled),
+                )
+                if result == 0:
+                    break
+        except Exception:
+            pass
+
+    def _set_setup_window_style(self, window):
+        ico_path = resource_path(os.path.join("assets", "settings.ico"))
+        try:
+            if os.path.exists(ico_path):
+                window.iconbitmap(ico_path)
+        except tk.TclError:
+            pass
+        self._apply_dark_title_bar(window)
 
     def _load_logo(self, size=(48, 48)):
         path = resource_path(os.path.join("assets", "jobmatcher-icon.png"))
@@ -224,9 +265,10 @@ class JobMatcherApp(ctk.CTk):
 
         nav = ctk.CTkFrame(shell, fg_color="transparent")
         nav.grid(row=0, column=0, padx=26, pady=(0, 14), sticky="ew")
-        nav.grid_columnconfigure(2, weight=1)
+        nav.grid_columnconfigure(3, weight=1)
         self._nav_button(nav, 0, "Busca")
         self._nav_button(nav, 1, "Analisar vaga")
+        self._nav_button(nav, 2, "Otimizar curriculo")
 
         tab_area = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0)
         tab_area.grid(row=1, column=0, sticky="nsew")
@@ -235,9 +277,11 @@ class JobMatcherApp(ctk.CTk):
 
         search_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         analysis_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
+        optimization_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         self.tab_frames = {
             "Busca": search_tab,
             "Analisar vaga": analysis_tab,
+            "Otimizar curriculo": optimization_tab,
         }
 
         main = search_tab
@@ -315,10 +359,11 @@ class JobMatcherApp(ctk.CTk):
             wrap="word",
         )
         self.log_box.grid(row=1, column=0, padx=18, pady=(0, 18), sticky="nsew")
-        self.log_box.insert("end", "Pronto. Configure a busca e clique em Iniciar ou Varredura unica.\n")
+        self.log_box.insert("end", "Pronto. Configure a busca e clique em Iniciar monitoramento ou Buscar agora.\n")
         self.log_box.configure(state="disabled")
 
         self._build_analysis_tab(analysis_tab)
+        self._build_optimization_tab(optimization_tab)
         self._show_tab("Busca")
 
     def _nav_button(self, parent, column, name):
@@ -326,7 +371,7 @@ class JobMatcherApp(ctk.CTk):
             parent,
             text=name,
             height=38,
-            width=132 if name == "Analisar vaga" else 86,
+            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 86,
             corner_radius=8,
             fg_color=SURFACE,
             hover_color=SURFACE_2,
@@ -499,6 +544,163 @@ class JobMatcherApp(ctk.CTk):
         )
         self.analysis_result_box.configure(state="disabled")
 
+    def _build_optimization_tab(self, parent):
+        parent.configure(fg_color=BG)
+        parent.grid_columnconfigure(0, weight=6)
+        parent.grid_columnconfigure(1, weight=5)
+        parent.grid_rowconfigure(1, weight=1)
+
+        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header.grid(row=0, column=0, columnspan=2, padx=26, pady=(26, 16), sticky="ew")
+        header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            header,
+            text="Otimizar curriculo",
+            font=("Segoe UI", 26, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            header,
+            textvariable=self.optimization_status,
+            font=("Segoe UI", 13),
+            text_color=MUTED,
+        ).grid(row=1, column=0, pady=(6, 0), sticky="w")
+
+        form = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        form.grid(row=1, column=0, padx=(26, 10), pady=(0, 24), sticky="nsew")
+        form.grid_columnconfigure((0, 1), weight=1)
+        form.grid_rowconfigure(3, weight=1)
+
+        ctk.CTkLabel(
+            form,
+            text="Vaga alvo",
+            font=("Segoe UI", 17, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, columnspan=2, padx=18, pady=(18, 2), sticky="w")
+        helper_row = ctk.CTkFrame(form, fg_color="transparent")
+        helper_row.grid(row=1, column=0, columnspan=2, padx=18, pady=(0, 12), sticky="ew")
+        helper_row.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            helper_row,
+            text="Reaproveite a ultima vaga analisada ou cole uma descricao nova para direcionar o curriculo.",
+            font=("Segoe UI", 12),
+            text_color=MUTED,
+            wraplength=520,
+            justify="left",
+        ).grid(row=0, column=0, pady=(0, 0), sticky="w")
+        ctk.CTkButton(
+            helper_row,
+            text="Usar vaga analisada",
+            height=38,
+            width=190,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=BORDER,
+            font=("Segoe UI", 12, "bold"),
+            command=self.use_last_analyzed_job,
+        ).grid(row=0, column=1, padx=(18, 0), pady=(0, 0), sticky="e")
+
+        self._text_field(form, 2, 0, "Titulo da vaga", self.optimization_title)
+        self._text_field(form, 2, 1, "Empresa", self.optimization_company)
+
+        desc_frame = ctk.CTkFrame(form, fg_color="transparent")
+        desc_frame.grid(row=3, column=0, columnspan=2, padx=18, pady=(0, 14), sticky="nsew")
+        desc_frame.grid_columnconfigure(0, weight=1)
+        desc_frame.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(desc_frame, text="Descricao da vaga", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        self.optimization_description = ctk.CTkTextbox(
+            desc_frame,
+            height=260,
+            corner_radius=7,
+            fg_color=BG,
+            border_width=1,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 12),
+            wrap="word",
+        )
+        self.optimization_description.grid(row=1, column=0, sticky="nsew", pady=(6, 0))
+
+        actions = ctk.CTkFrame(form, fg_color="transparent")
+        actions.grid(row=4, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
+        actions.grid_columnconfigure((0, 1, 2), weight=1)
+        self.optimize_button = ctk.CTkButton(
+            actions,
+            text="Gerar otimizacao",
+            height=38,
+            corner_radius=8,
+            fg_color=ACCENT,
+            hover_color=ACCENT_DIM,
+            text_color=BG,
+            command=self.optimize_resume,
+        )
+        self.optimize_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        ctk.CTkButton(
+            actions,
+            text="Copiar otimizacao",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            command=self.copy_optimization,
+        ).grid(row=0, column=1, sticky="ew", padx=(0, 8))
+        ctk.CTkButton(
+            actions,
+            text="Limpar",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            command=self.clear_optimization,
+        ).grid(row=0, column=2, sticky="ew")
+
+        result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
+        result_panel.grid_columnconfigure(0, weight=1)
+        result_panel.grid_rowconfigure(1, weight=1)
+        result_header = ctk.CTkFrame(result_panel, fg_color="transparent")
+        result_header.grid(row=0, column=0, padx=18, pady=(18, 8), sticky="ew")
+        result_header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            result_header,
+            text="Curriculo direcionado",
+            font=("Segoe UI", 17, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            result_header,
+            text="Sugestoes editaveis, baseadas no que ja existe no perfil.",
+            font=("Segoe UI", 12),
+            text_color=MUTED,
+        ).grid(row=1, column=0, sticky="w")
+
+        self.optimization_result_box = ctk.CTkTextbox(
+            result_panel,
+            corner_radius=8,
+            fg_color=BG,
+            border_width=1,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 12),
+            wrap="word",
+        )
+        self.optimization_result_box.grid(row=1, column=0, padx=18, pady=(0, 18), sticky="nsew")
+        self.optimization_result_box.insert(
+            "end",
+            "A otimizacao vai aparecer aqui.\n\n"
+            "O app vai sugerir headline, resumo, skills, bullets e alertas de honestidade.\n",
+        )
+        self.optimization_result_box.configure(state="disabled")
+
     def _text_field(self, parent, row, column, label, variable):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
         frame.grid(row=row, column=column, padx=14, pady=14, sticky="ew")
@@ -519,15 +721,37 @@ class JobMatcherApp(ctk.CTk):
         data = load_user_config()
         window = ctk.CTkToplevel(self)
         window.title("Configurar Job Matcher")
-        window.geometry("760x720")
-        window.minsize(720, 620)
+        window.geometry("1040x760")
+        window.minsize(940, 660)
         window.transient(self)
         window.grab_set()
+        self._set_setup_window_style(window)
+        window.after(100, lambda: self._set_setup_window_style(window))
 
         window.grid_columnconfigure(0, weight=1)
-        window.grid_rowconfigure(0, weight=1)
+        window.grid_rowconfigure(1, weight=1)
+
+        header = ctk.CTkFrame(window, fg_color=BG, corner_radius=0)
+        header.grid(row=0, column=0, sticky="ew", padx=22, pady=(18, 10))
+        header.grid_columnconfigure(0, weight=1)
+
+        title_block = ctk.CTkFrame(header, fg_color="transparent")
+        title_block.grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            title_block,
+            text="Configuracao do usuario",
+            font=("Segoe UI", 24, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            title_block,
+            text=f"Arquivo local: {get_config_path()}",
+            font=("Segoe UI", 11),
+            text_color=MUTED,
+        ).grid(row=1, column=0, sticky="w", pady=(3, 0))
+
         body = ctk.CTkScrollableFrame(window, fg_color=BG)
-        body.grid(row=0, column=0, sticky="nsew", padx=18, pady=18)
+        body.grid(row=1, column=0, sticky="nsew", padx=22, pady=(0, 18))
         body.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(body, text="Configuração do usuário", font=("Segoe UI", 22, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w")
@@ -538,8 +762,11 @@ class JobMatcherApp(ctk.CTk):
             text_color=MUTED,
         ).grid(row=1, column=0, sticky="w", pady=(2, 14))
 
+        for child in body.winfo_children():
+            child.destroy()
+
         fields = {}
-        row = 2
+        row = 0
 
         def add_entry(key, label, secret=False):
             nonlocal row
@@ -561,6 +788,8 @@ class JobMatcherApp(ctk.CTk):
             ).grid(row=1, column=0, sticky="ew", pady=(4, 0))
             row += 1
 
+        ctk.CTkLabel(body, text="Credenciais", font=("Segoe UI", 16, "bold"), text_color=TEXT).grid(row=row, column=0, sticky="w", pady=(0, 8))
+        row += 1
         add_entry("groq_api_key", "API da IA", secret=True)
         add_entry("groq_model", "Modelo da IA")
         if not fields["groq_model"].get():
@@ -569,6 +798,9 @@ class JobMatcherApp(ctk.CTk):
         add_entry("email_remetente", "Gmail remetente")
         add_entry("email_senha_app", "Senha de app do Gmail", secret=True)
         add_entry("email_destinatario", "E-mail que recebera os matches")
+
+        ctk.CTkLabel(body, text="Busca", font=("Segoe UI", 16, "bold"), text_color=TEXT).grid(row=row, column=0, sticky="w", pady=(8, 8))
+        row += 1
         add_entry("location", "Pais/regiao principal da busca")
         if not fields["location"].get():
             fields["location"].set("Brasil")
@@ -615,6 +847,8 @@ class JobMatcherApp(ctk.CTk):
             ).grid(row=1, column=1, pady=(4, 0))
             row += 1
 
+        ctk.CTkLabel(body, text="Perfil e curriculo", font=("Segoe UI", 16, "bold"), text_color=TEXT).grid(row=row, column=0, sticky="w", pady=(8, 8))
+        row += 1
         add_file_picker("profile_text_path", "Arquivo TXT com tudo que o usuario sabe sobre si", [("Texto", "*.txt"), ("Todos", "*.*")], "perfil.txt")
         add_file_picker("resume_pdf_path", "Curriculo em PDF", [("PDF", "*.pdf"), ("Todos", "*.*")], "curriculo.pdf")
 
@@ -647,6 +881,8 @@ class JobMatcherApp(ctk.CTk):
             multiline_boxes[key] = box
             row += 1
 
+        ctk.CTkLabel(body, text="Termos e filtros", font=("Segoe UI", 16, "bold"), text_color=TEXT).grid(row=row, column=0, sticky="w", pady=(8, 8))
+        row += 1
         add_list_box("search_base_terms", "Areas, cargos ou stacks principais", "SEARCH_BASE_TERMS")
         add_list_box("search_seniority_terms", "Senioridade desejada", "SEARCH_SENIORITY_TERMS")
         add_list_box("search_work_modes", "Modalidade de trabalho", "SEARCH_WORK_MODES")
@@ -675,29 +911,35 @@ class JobMatcherApp(ctk.CTk):
             messagebox.showinfo("Job Matcher", "Configuracao salva com sucesso.")
             window.destroy()
 
-        actions = ctk.CTkFrame(body, fg_color="transparent")
-        actions.grid(row=row, column=0, sticky="ew", pady=(8, 0))
-        actions.grid_columnconfigure((0, 1), weight=1)
+        actions = ctk.CTkFrame(header, fg_color="transparent")
+        actions.grid(row=0, column=1, sticky="e")
         ctk.CTkButton(
             actions,
-            text="Salvar configuração",
-            height=40,
+            text="Salvar configuracao",
+            width=180,
+            height=42,
             corner_radius=8,
             fg_color=ACCENT,
             hover_color=ACCENT_DIM,
             text_color=BG,
+            font=("Segoe UI", 12, "bold"),
             command=save_setup,
-        ).grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        ).grid(row=0, column=0, sticky="e", padx=(0, 10))
         ctk.CTkButton(
             actions,
             text="Cancelar",
-            height=40,
+            width=120,
+            height=42,
             corner_radius=8,
             fg_color=SURFACE,
             hover_color=SURFACE_2,
             text_color=TEXT,
+            border_width=1,
+            border_color=BORDER,
             command=window.destroy,
-        ).grid(row=0, column=1, sticky="ew")
+        ).grid(row=0, column=1, sticky="e")
+        window.bind("<Control-s>", lambda _event: save_setup())
+        window.bind("<Escape>", lambda _event: window.destroy())
 
     def _sidebar_card(self, title, value_var, accent):
         frame = ctk.CTkFrame(self.sidebar, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
@@ -780,6 +1022,7 @@ class JobMatcherApp(ctk.CTk):
             return
 
         self._apply_runtime_settings()
+        logging.info("Aguarde. Preparando monitoramento e primeira busca.")
         self.stop_event.clear()
         self.monitoring = True
         self.worker = threading.Thread(target=self._monitor_loop, daemon=True)
@@ -791,6 +1034,7 @@ class JobMatcherApp(ctk.CTk):
             return
 
         self._apply_runtime_settings()
+        logging.info("Aguarde. Preparando busca e analise das vagas.")
         self.stop_event.clear()
         self.monitoring = False
         self.worker = threading.Thread(target=self._scan_once_worker, daemon=True)
@@ -812,6 +1056,7 @@ class JobMatcherApp(ctk.CTk):
         if not engine.GROQ_API_KEY or not engine.EMAIL_REMETENTE or not engine.EMAIL_SENHA_APP or not engine.EMAIL_DESTINATARIO:
             messagebox.showinfo("Job Matcher", "Abra Configurar e preencha IA e e-mail antes do teste.")
             return
+        logging.info("Aguarde. Enviando e-mail de teste.")
         self.worker = threading.Thread(target=self._send_email_worker, daemon=True)
         self.worker.start()
 
@@ -853,10 +1098,60 @@ class JobMatcherApp(ctk.CTk):
         self.clipboard_append(self.last_analysis_text)
         self.analysis_status.set("Analise copiada para a area de transferencia.")
 
+    def use_last_analyzed_job(self):
+        if not self.last_job_context:
+            messagebox.showinfo("Job Matcher", "Ainda nao ha vaga analisada para reutilizar.")
+            return
+        self.optimization_title.set(self.last_job_context.get("title", ""))
+        self.optimization_company.set(self.last_job_context.get("company", ""))
+        self.optimization_description.delete("1.0", "end")
+        self.optimization_description.insert("1.0", self.last_job_context.get("description", ""))
+        self.optimization_status.set("Vaga analisada carregada. Clique em Gerar otimizacao.")
+        self._show_tab("Otimizar curriculo")
+
+    def optimize_resume(self):
+        if self.optimization_worker and self.optimization_worker.is_alive():
+            messagebox.showinfo("Job Matcher", "A otimizacao atual ainda esta em execucao.")
+            return
+
+        description = self.optimization_description.get("1.0", "end").strip()
+        if len(description) < 80:
+            messagebox.showinfo("Job Matcher", "Cole uma descricao de vaga mais completa antes de otimizar.")
+            return
+
+        self.optimization_status.set("Gerando otimizacao com IA...")
+        self.optimize_button.configure(state="disabled", text="Gerando...")
+        self.optimization_worker = threading.Thread(
+            target=self._optimization_worker,
+            args=(self.optimization_title.get().strip(), self.optimization_company.get().strip(), description),
+            daemon=True,
+        )
+        self.optimization_worker.start()
+
+    def clear_optimization(self):
+        self.optimization_title.set("")
+        self.optimization_company.set("")
+        self.optimization_description.delete("1.0", "end")
+        self.last_optimization_text = ""
+        self.optimization_status.set("Cole uma vaga e gere uma otimizacao.")
+        self._set_optimization_result(
+            "A otimizacao vai aparecer aqui.\n\n"
+            "O app vai sugerir headline, resumo, skills, bullets e alertas de honestidade.\n"
+        )
+
+    def copy_optimization(self):
+        if not self.last_optimization_text:
+            messagebox.showinfo("Job Matcher", "Ainda nao ha otimizacao para copiar.")
+            return
+        self.clipboard_clear()
+        self.clipboard_append(self.last_optimization_text)
+        self.optimization_status.set("Otimizacao copiada para a area de transferencia.")
+
     def open_reports_folder(self):
-        path = os.path.abspath("reports")
-        os.makedirs(path, exist_ok=True)
-        os.startfile(path)
+        path = REPORT_DIR
+        path.mkdir(parents=True, exist_ok=True)
+        logging.info("Abrindo pasta de relatorios: %s", path)
+        os.startfile(str(path))
 
     def _analysis_worker(self, title, company, description):
         try:
@@ -865,14 +1160,35 @@ class JobMatcherApp(ctk.CTk):
                 raise ValueError("A IA nao retornou uma analise valida para esta vaga.")
             report_json, report_md = save_manual_analysis_report(title, company, description, result)
             output = self._format_analysis(title, company, result, report_md)
+            self.last_job_context = {
+                "title": title,
+                "company": company,
+                "description": description,
+            }
             self.last_analysis_text = output
             self.after(0, self._set_analysis_result, output)
-            self.after(0, self.analysis_status.set, f"Analise concluida e salva em reports/{report_md.name}.")
+            self.after(0, self.analysis_status.set, f"Analise salva em reports/{report_md.name}. Voce pode otimizar essa vaga na aba Otimizar curriculo.")
         except Exception as exc:
             self.after(0, messagebox.showerror, "Job Matcher", str(exc))
             self.after(0, self.analysis_status.set, "Nao foi possivel analisar esta vaga.")
         finally:
             self.after(0, lambda: self.analyze_button.configure(state="normal", text="Analisar compatibilidade"))
+
+    def _optimization_worker(self, title, company, description):
+        try:
+            result = engine.optimize_manual_resume(title, company, description)
+            if result is None:
+                raise ValueError("A IA nao retornou uma otimizacao valida para esta vaga.")
+            report_json, report_md = save_resume_optimization_report(title, company, description, result)
+            output = self._format_optimization(title, company, result, report_md)
+            self.last_optimization_text = output
+            self.after(0, self._set_optimization_result, output)
+            self.after(0, self.optimization_status.set, f"Otimizacao concluida e salva em reports/{report_md.name}.")
+        except Exception as exc:
+            self.after(0, messagebox.showerror, "Job Matcher", str(exc))
+            self.after(0, self.optimization_status.set, "Nao foi possivel otimizar para esta vaga.")
+        finally:
+            self.after(0, lambda: self.optimize_button.configure(state="normal", text="Gerar otimizacao"))
 
     def _format_analysis(self, title, company, result, report_path=None):
         lines = []
@@ -883,6 +1199,7 @@ class JobMatcherApp(ctk.CTk):
         lines.append("")
         lines.append(f"Score: {result.score}%")
         lines.append(f"Prioridade de ajuste: {result.prioridade_ajuste}")
+        lines.append("Regua: mesma analise usada na busca automatica.")
         if result.veredito:
             lines.append(f"Veredito: {result.veredito}")
         lines.append("")
@@ -908,11 +1225,47 @@ class JobMatcherApp(ctk.CTk):
             lines.append("- Nenhum ponto especifico identificado.")
         lines.append("")
 
+    def _format_optimization(self, title, company, result, report_path=None):
+        lines = []
+        heading = title or "Vaga alvo"
+        if company:
+            heading = f"{heading} @ {company}"
+        lines.append(heading)
+        lines.append("")
+        if result.headline_sugerida:
+            lines.append("Headline sugerida")
+            lines.append(result.headline_sugerida)
+            lines.append("")
+        if result.resumo_profissional_sugerido:
+            lines.append("Resumo profissional sugerido")
+            lines.append(result.resumo_profissional_sugerido)
+            lines.append("")
+        self._append_section(lines, "Skills para priorizar", result.skills_prioritarias)
+        self._append_section(lines, "Experiencias ou projetos para priorizar", result.experiencias_prioritarias)
+        self._append_section(lines, "Bullets sugeridos", result.bullets_sugeridos)
+        self._append_section(lines, "Reduzir ou remover destaque", result.reduzir_ou_remover)
+        self._append_section(lines, "Evidencias ausentes", result.evidencias_ausentes)
+        self._append_section(lines, "Avisos de honestidade", result.avisos_honestidade)
+        if result.proxima_acao:
+            lines.append("Proxima acao")
+            lines.append(f"- {result.proxima_acao}")
+            lines.append("")
+        if report_path:
+            lines.append("Relatorio salvo")
+            lines.append(f"- {report_path}")
+        return "\n".join(lines).strip() + "\n"
+
     def _set_analysis_result(self, text):
         self.analysis_result_box.configure(state="normal")
         self.analysis_result_box.delete("1.0", "end")
         self.analysis_result_box.insert("end", text)
         self.analysis_result_box.configure(state="disabled")
+
+    def _set_optimization_result(self, text):
+        self.optimization_result_box.configure(state="normal")
+        self.optimization_result_box.delete("1.0", "end")
+        self.optimization_result_box.insert("end", text)
+        self.optimization_result_box.configure(state="disabled")
 
     def _scan_once_worker(self):
         self._set_status("Varredura unica")

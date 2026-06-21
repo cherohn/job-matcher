@@ -36,6 +36,7 @@ $env:TK_LIBRARY = Join-Path $pythonTcl "tk8.6"
     --add-data "notifier;notifier" `
     --add-data "assets\jobmatcher-icon.png;assets" `
     --add-data "assets\jobmatcher.ico;assets" `
+    --add-data "assets\settings.ico;assets" `
     app_desktop.py
 
 Write-Host ""

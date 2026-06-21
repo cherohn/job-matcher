@@ -23,10 +23,10 @@ class JobAlert:
 
 def _color(score: int) -> str:
     if score >= 90:
-        return "#16a34a"
-    if score >= 85:
         return "#22c55e"
-    return "#3b82f6"
+    if score >= 85:
+        return "#84cc16"
+    return "#60a5fa"
 
 
 def _badge(score: int) -> str:
@@ -46,23 +46,28 @@ def _items(values: list[str], empty: str) -> str:
 
 def _build_card(a: JobAlert, compact: bool = False) -> str:
     c = _color(a.score)
-    btn = f'<p><a href="{escape(a.url)}" style="color:#2563eb;font-weight:bold;">Abrir vaga</a></p>' if a.url else ""
+    btn = (
+        f'<p style="margin:18px 0 0;"><a href="{escape(a.url)}" '
+        'style="display:inline-block;background:#c49a3c;color:#0f0f0f;text-decoration:none;'
+        'font-weight:bold;padding:10px 14px;border-radius:6px;">Abrir vaga</a></p>'
+        if a.url else ""
+    )
     return f"""
-    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:16px;margin:0 0 16px;background:#ffffff;">
+    <div style="border:1px solid #303030;border-radius:8px;padding:18px;margin:0 0 16px;background:#181818;color:#dcdcdc;">
       <p style="margin:0 0 6px;color:{c};font-weight:bold;">{_badge(a.score)} - {a.score}%</p>
-      <h3 style="margin:0 0 4px;color:#111827;">{escape(a.title)}</h3>
-      <p style="margin:0 0 10px;color:#6b7280;">{escape(a.company)} | {escape(a.location)} | {escape(a.source)}</p>
-      <p style="margin:0 0 12px;color:#374151;">{escape(a.resumo)}</p>
-      <p style="margin:0 0 4px;"><b>Pontos fortes</b></p>
-      <ul style="margin-top:0;">{_items(a.pontos_fortes[:3], "Nenhum ponto forte gerado.")}</ul>
-      <p style="margin:0 0 4px;"><b>Gaps</b></p>
-      <ul style="margin-top:0;">{_items(a.gaps[:2], "Nenhum gap significativo.")}</ul>
-      <p style="margin:0 0 4px;"><b>Curriculo direcionado</b></p>
-      <p style="margin:0 0 8px;color:#374151;"><b>Headline:</b> {escape(a.curriculo_headline or "Use uma headline alinhada ao titulo da vaga.")}</p>
-      <p style="margin:0 0 4px;">O que destacar:</p>
-      <ul style="margin-top:0;">{_items(a.curriculo_foco[:3], "Use os pontos fortes acima como base.")}</ul>
-      <p style="margin:0 0 4px;">Ajustes honestos:</p>
-      <ul style="margin-top:0;">{_items(a.curriculo_ajustes[:3], "Nenhum ajuste especifico gerado.")}</ul>
+      <h3 style="margin:0 0 4px;color:#f5f5f5;">{escape(a.title)}</h3>
+      <p style="margin:0 0 12px;color:#9ca3af;">{escape(a.company)} | {escape(a.location)} | {escape(a.source)}</p>
+      <p style="margin:0 0 14px;color:#d1d5db;line-height:1.5;">{escape(a.resumo)}</p>
+      <p style="margin:0 0 4px;color:#f5f5f5;"><b>Pontos fortes</b></p>
+      <ul style="margin-top:0;color:#dcdcdc;line-height:1.5;">{_items(a.pontos_fortes[:3], "Nenhum ponto forte gerado.")}</ul>
+      <p style="margin:0 0 4px;color:#f5f5f5;"><b>Gaps</b></p>
+      <ul style="margin-top:0;color:#dcdcdc;line-height:1.5;">{_items(a.gaps[:2], "Nenhum gap significativo.")}</ul>
+      <p style="margin:0 0 4px;color:#f5f5f5;"><b>Curriculo direcionado</b></p>
+      <p style="margin:0 0 8px;color:#d1d5db;line-height:1.5;"><b>Headline:</b> {escape(a.curriculo_headline or "Use uma headline alinhada ao titulo da vaga.")}</p>
+      <p style="margin:0 0 4px;color:#f5f5f5;">O que destacar:</p>
+      <ul style="margin-top:0;color:#dcdcdc;line-height:1.5;">{_items(a.curriculo_foco[:3], "Use os pontos fortes acima como base.")}</ul>
+      <p style="margin:0 0 4px;color:#f5f5f5;">Ajustes honestos:</p>
+      <ul style="margin-top:0;color:#dcdcdc;line-height:1.5;">{_items(a.curriculo_ajustes[:3], "Nenhum ajuste especifico gerado.")}</ul>
       {btn}
     </div>
     """
@@ -77,9 +82,9 @@ def _smtp_send(msg: MIMEMultipart, remetente: str, senha_app: str, destinatario:
 def send_job_alert(alert: JobAlert, remetente: str, senha_app: str, destinatario: str) -> bool:
     try:
         html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-        <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
-          <div style="max-width:760px;margin:32px auto;padding:24px;">
-            <h2 style="margin:0 0 8px;color:#111827;">Job Matcher</h2>
+        <body style="margin:0;padding:0;background:#0f0f0f;font-family:Arial,sans-serif;color:#dcdcdc;">
+          <div style="max-width:760px;margin:0 auto;padding:28px 20px;">
+            <h2 style="margin:0 0 16px;color:#f5f5f5;">Job Matcher</h2>
             {_build_card(alert)}
           </div>
         </body></html>"""
@@ -100,10 +105,10 @@ def send_job_digest(alerts: list[JobAlert], report_path: str, remetente: str, se
     try:
         items = "".join(_build_card(alert, compact=True) for alert in alerts)
         html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
-        <body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,sans-serif;">
-          <div style="max-width:760px;margin:32px auto;padding:24px;">
-            <h2 style="margin:0 0 8px;color:#111827;">Job Matcher - matches acima de {min_score}%</h2>
-            <p style="color:#6b7280;">Relatorio salvo localmente em: <code>{escape(report_path)}</code></p>
+        <body style="margin:0;padding:0;background:#0f0f0f;font-family:Arial,sans-serif;color:#dcdcdc;">
+          <div style="max-width:760px;margin:0 auto;padding:28px 20px;">
+            <h2 style="margin:0 0 8px;color:#f5f5f5;">Job Matcher - matches acima de {min_score}%</h2>
+            <p style="margin:0 0 18px;color:#9ca3af;">Encontrei {len(alerts)} vaga(s) com score acima do corte definido.</p>
             {items}
           </div>
         </body></html>"""
@@ -123,13 +128,19 @@ def send_job_digest(alerts: list[JobAlert], report_path: str, remetente: str, se
 def send_startup_email(remetente: str, senha_app: str, destinatario: str, queries: list, min_score: int):
     try:
         qs = "".join(f"<li>{escape(str(q))}</li>" for q in queries)
-        html = f"""<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;padding:24px;">
-          <h2>Job Matcher iniciado</h2>
-          <p>Monitorando vagas para:</p><ul>{qs}</ul>
-          <p><b>Score minimo:</b> {min_score}%</p>
-          <p><b>Fonte principal:</b> Google via Serper</p>
-          <p style="color:#6b7280;font-size:13px;">Voce recebera um e-mail quando encontrar vagas compativeis.</p>
-        </div>"""
+        html = f"""<!DOCTYPE html><html><head><meta charset="UTF-8"></head>
+        <body style="margin:0;padding:0;background:#0f0f0f;font-family:Arial,sans-serif;color:#dcdcdc;">
+          <div style="max-width:620px;margin:0 auto;padding:28px 20px;">
+            <div style="border:1px solid #303030;border-radius:8px;padding:18px;background:#181818;">
+              <h2 style="margin:0 0 12px;color:#f5f5f5;">Job Matcher iniciado</h2>
+              <p style="color:#d1d5db;">Monitorando vagas para:</p>
+              <ul style="color:#dcdcdc;line-height:1.5;">{qs}</ul>
+              <p style="color:#d1d5db;"><b>Score minimo:</b> {min_score}%</p>
+              <p style="color:#d1d5db;"><b>Fonte principal:</b> Google via Serper</p>
+              <p style="color:#9ca3af;font-size:13px;">Voce recebera um e-mail quando encontrar vagas compativeis.</p>
+            </div>
+          </div>
+        </body></html>"""
 
         msg = MIMEMultipart("alternative")
         msg["Subject"] = "Job Matcher - monitoramento iniciado"
