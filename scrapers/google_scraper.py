@@ -3,7 +3,7 @@ import hashlib
 import re
 import unicodedata
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Callable, List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 @dataclass
@@ -183,6 +183,8 @@ def fetch_google_jobs(
     exclude_terms: Optional[List[str]] = None,
     date_restrict: str = "m1",
     verify_active_pages: bool = True,
+    max_jobs: Optional[int] = None,
+    skip_job: Optional[Callable[[Job], bool]] = None,
 ) -> List[Job]:
     """
     Busca vagas no Google via Serper.dev usando o endpoint /search.
@@ -198,14 +200,19 @@ def fetch_google_jobs(
     }
 
     for query in queries:
+        if max_jobs and len(jobs) >= max_jobs:
+            break
         try:
             search_query = _build_search_query(query, location, location_filters, exclude_terms)
+            result_count = 10
+            if max_jobs:
+                result_count = max(1, min(10, max_jobs - len(jobs)))
 
             payload = {
                 "q": search_query,
                 "gl": "br",
                 "hl": "pt-br",
-                "num": 10,
+                "num": result_count,
             }
             if date_restrict:
                 payload["dateRestrict"] = date_restrict
@@ -272,7 +279,7 @@ def fetch_google_jobs(
                 seen_ids.add(job_id)
                 seen_keys.add(duplicate_key)
 
-                jobs.append(Job(
+                job = Job(
                     id=job_id,
                     title=title,
                     company=company,
@@ -280,7 +287,13 @@ def fetch_google_jobs(
                     description=snippet[:3000],
                     url=canonical_url,
                     source=source
-                ))
+                )
+                if skip_job and skip_job(job):
+                    continue
+
+                jobs.append(job)
+                if max_jobs and len(jobs) >= max_jobs:
+                    break
 
         except requests.RequestException as e:
             print(f"[Google/Serper] Erro de conexão para '{query}': {e}")

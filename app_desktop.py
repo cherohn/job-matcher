@@ -9,6 +9,8 @@ import sys
 import threading
 import time
 import tkinter as tk
+import webbrowser
+from pathlib import Path
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
@@ -57,7 +59,11 @@ def friendly_log_message(level, message):
         return clean.replace("Unicas", "unicas")
     if "novas para analisar" in low:
         return clean
+    if "nenhuma vaga nova" in low:
+        return clean
     if "limitando analise" in low:
+        return clean
+    if "proxima tentativa" in low:
         return clean
     if clean.startswith("Analisando:"):
         return clean.replace("Analisando:", "Analisando vaga:")
@@ -106,8 +112,8 @@ class JobMatcherApp(ctk.CTk):
 
         super().__init__(fg_color=BG)
         self.title("Job Matcher")
-        self.geometry("1120x720")
-        self.minsize(980, 620)
+        self.geometry("1170x770")
+        self.minsize(1030, 670)
 
         self.messages = queue.Queue()
         self.stop_event = threading.Event()
@@ -787,8 +793,8 @@ class JobMatcherApp(ctk.CTk):
         data = load_user_config()
         window = ctk.CTkToplevel(self)
         window.title("Configurar Job Matcher")
-        window.geometry("1040x760")
-        window.minsize(940, 660)
+        window.geometry("1090x810")
+        window.minsize(990, 710)
         window.transient(self)
         window.grab_set()
         self._set_setup_window_style(window)
@@ -1355,14 +1361,18 @@ class JobMatcherApp(ctk.CTk):
                 text_color=TEXT,
                 border_width=1,
                 border_color=BORDER,
-                command=lambda path=report.get("md_path"): self.open_report_file(path),
+                command=lambda path=report.get("open_path") or report.get("md_path"): self.open_report_file(path),
             ).grid(row=0, column=1, rowspan=2, padx=14, pady=12, sticky="e")
 
     def open_report_file(self, path):
         if not path:
             return
         try:
-            os.startfile(str(path))
+            path = Path(path)
+            if path.suffix.lower() == ".html":
+                webbrowser.open(path.resolve().as_uri())
+            else:
+                os.startfile(str(path))
         except Exception as exc:
             messagebox.showerror("Job Matcher", f"Nao foi possivel abrir o relatorio:\n{exc}")
 
@@ -1503,6 +1513,13 @@ class JobMatcherApp(ctk.CTk):
             seconds = max(1, int(self.interval.get()) * 60)
             next_at = time.strftime("%H:%M:%S", time.localtime(time.time() + seconds))
             self._set_next_scan(next_at)
+            minutes = max(1, int(self.interval.get()))
+            logging.info(
+                "Proxima tentativa em %s minuto(s), por volta de %s. "
+                "Se nao quiser aguardar, clique em Parar e depois feche o app.",
+                minutes,
+                next_at,
+            )
             for _ in range(seconds):
                 if self.stop_event.is_set():
                     break

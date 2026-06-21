@@ -26,7 +26,7 @@ from core.resume_optimizer import optimize_resume_for_job
 from core.query_builder import build_search_queries
 from core.resume_parser import build_profile
 from core.user_config import is_configured, load_user_config
-from core.cache import is_seen, mark_seen, get_stats
+from core.cache import is_recent_job, mark_seen, get_stats
 from core.report import save_scan_report
 from notifier.email_notifier import send_job_digest, send_startup_email, JobAlert
 
@@ -196,7 +196,14 @@ def run_scan(max_jobs_override=None, should_stop=None):
 
     all_jobs = []
     search_queries = get_search_queries()
-    log.info(f"Queries ativas: {len(search_queries)}")
+    max_jobs = max_jobs_override
+    if max_jobs is None:
+        max_jobs = getattr(settings, "MAX_JOBS_TO_ANALYZE_PER_SCAN", 25)
+    query_limit = len(search_queries)
+    if max_jobs:
+        query_limit = min(len(search_queries), max(3, int(max_jobs)))
+    limited_search_queries = search_queries[:query_limit]
+    log.info(f"Queries ativas: {len(search_queries)} | Usadas nesta varredura: {len(limited_search_queries)}")
 
     fontes = []
     serper_api_key = getattr(settings, "SERPER_API_KEY", "")
@@ -204,13 +211,15 @@ def run_scan(max_jobs_override=None, should_stop=None):
         fontes.append((
             "Google/Serper",
             lambda: fetch_google_jobs(
-                search_queries,
+                limited_search_queries,
                 LOCATION,
                 serper_api_key,
                 location_filters=getattr(settings, "JOB_LOCATION_FILTERS", []),
                 exclude_terms=getattr(settings, "ACTIVE_JOB_EXCLUDE_TERMS", []),
                 date_restrict=getattr(settings, "SERPER_DATE_RESTRICT", "m1"),
                 verify_active_pages=getattr(settings, "VERIFY_ACTIVE_JOB_PAGES", True),
+                max_jobs=max_jobs,
+                skip_job=is_recent_job,
             )
         ))
     else:
@@ -218,10 +227,10 @@ def run_scan(max_jobs_override=None, should_stop=None):
 
     if getattr(settings, "USE_DIRECT_SCRAPERS", False):
         fontes.extend([
-            ("Gupy",          lambda: fetch_gupy_jobs(search_queries, LOCATION)),
-            ("Indeed",        lambda: fetch_indeed_jobs(search_queries, LOCATION)),
-            ("Vagas.com.br",  lambda: fetch_vagas_jobs(search_queries, LOCATION)),
-            ("LinkedIn",      lambda: fetch_linkedin_jobs(search_queries, LOCATION)),
+            ("Gupy",          lambda: fetch_gupy_jobs(limited_search_queries, LOCATION)),
+            ("Indeed",        lambda: fetch_indeed_jobs(limited_search_queries, LOCATION)),
+            ("Vagas.com.br",  lambda: fetch_vagas_jobs(limited_search_queries, LOCATION)),
+            ("LinkedIn",      lambda: fetch_linkedin_jobs(limited_search_queries, LOCATION)),
         ])
 
     if not fontes:
@@ -232,6 +241,9 @@ def run_scan(max_jobs_override=None, should_stop=None):
         if should_stop and should_stop():
             log.info("Varredura interrompida antes de consultar novas fontes.")
             return
+        if max_jobs and len(all_jobs) >= max_jobs:
+            log.info(f"Coleta limitada a {max_jobs} vaga(s) candidata(s) nesta varredura.")
+            break
 
         try:
             vagas = fetch()
@@ -244,11 +256,9 @@ def run_scan(max_jobs_override=None, should_stop=None):
     all_jobs = _dedupe_jobs(all_jobs)
     log.info(f"Total coletado: {total_before_dedupe} | Unicas: {len(all_jobs)}")
 
-    novas = [j for j in all_jobs if not is_seen(j.id)]
-    log.info(f"Novas para analisar: {len(novas)}")
-    max_jobs = max_jobs_override
-    if max_jobs is None:
-        max_jobs = getattr(settings, "MAX_JOBS_TO_ANALYZE_PER_SCAN", 25)
+    novas = [j for j in all_jobs if not is_recent_job(j)]
+    blocked_recent = len(all_jobs) - len(novas)
+    log.info(f"Novas para analisar: {len(novas)} | Bloqueadas por cache 30d: {blocked_recent}")
     if max_jobs and len(novas) > max_jobs:
         log.info(f"Limitando analise a {max_jobs} vagas nesta varredura")
         novas = novas[:max_jobs]
@@ -269,7 +279,7 @@ def run_scan(max_jobs_override=None, should_stop=None):
 
         if not job.description or len(job.description) < 50:
             log.warning("  → Descrição insuficiente, pulando")
-            mark_seen(job.id, score=0)
+            mark_seen(job.id, score=0, job=job)
             continue
 
         result = calculate_match(
@@ -286,7 +296,7 @@ def run_scan(max_jobs_override=None, should_stop=None):
             log.error("  → Falha no match, pulando")
             continue
 
-        mark_seen(job.id, score=result.score)
+        mark_seen(job.id, score=result.score, job=job)
         analyzed_records.append({
             "id": job.id,
             "title": job.title,

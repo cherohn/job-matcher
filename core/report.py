@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
+from core.html_reporter import generate_job_analysis_report, generate_resume_optimization_report, generate_scan_report
+
 
 REPORT_DIR = Path(__file__).parent.parent / "reports"
 
@@ -54,8 +56,6 @@ def save_scan_report(
         "analyzed_jobs": analyzed_sorted,
     }
 
-    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
     lines = [
         "# Job Matcher Scan",
         "",
@@ -84,6 +84,17 @@ def save_scan_report(
         ])
 
     md_path.write_text("\n".join(lines), encoding="utf-8")
+    html_path = generate_scan_report(
+        payload["collected_jobs"],
+        analyzed_sorted,
+        min_score,
+        filename_base=json_path.stem,
+    )
+    try:
+        payload["html_report"] = str(html_path.relative_to(REPORT_DIR))
+    except ValueError:
+        payload["html_report"] = str(html_path)
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return json_path, md_path
 
 
@@ -153,6 +164,18 @@ def save_manual_analysis_report(
     ]
 
     md_path.write_text("\n".join(lines), encoding="utf-8")
+    html_path = generate_job_analysis_report(
+        job_title,
+        job_company,
+        job_description,
+        analysis_data,
+        filename_base=json_path.stem,
+    )
+    try:
+        payload["html_report"] = str(html_path.relative_to(REPORT_DIR))
+    except ValueError:
+        payload["html_report"] = str(html_path)
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return json_path, md_path
 
 
@@ -180,8 +203,6 @@ def save_resume_optimization_report(
         },
         "optimization": optimization_data,
     }
-    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-
     lines = [
         "# Otimizacao de Curriculo",
         "",
@@ -232,7 +253,69 @@ def save_resume_optimization_report(
     ]
 
     md_path.write_text("\n".join(lines), encoding="utf-8")
+    html_path = generate_resume_optimization_report(
+        job_title,
+        job_company,
+        job_description,
+        optimization_data,
+        filename_base=json_path.stem,
+    )
+    try:
+        payload["html_report"] = str(html_path.relative_to(REPORT_DIR))
+    except ValueError:
+        payload["html_report"] = str(html_path)
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return json_path, md_path
+
+
+def _relative_or_absolute(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPORT_DIR))
+    except ValueError:
+        return str(path)
+
+
+def _resolve_html_path(payload: Dict[str, Any], json_path: Path, report_type: str) -> Path | None:
+    html_report = payload.get("html_report")
+    if html_report:
+        html_path = Path(html_report)
+        if not html_path.is_absolute():
+            html_path = REPORT_DIR / html_path
+        if html_path.exists():
+            return html_path
+
+    try:
+        if report_type == "manual_job_analysis":
+            job = payload.get("job", {})
+            html_path = generate_job_analysis_report(
+                job.get("title", ""),
+                job.get("company", ""),
+                job.get("description", ""),
+                payload.get("analysis", {}),
+                filename_base=json_path.stem,
+            )
+        elif report_type == "resume_optimization":
+            job = payload.get("job", {})
+            html_path = generate_resume_optimization_report(
+                job.get("title", ""),
+                job.get("company", ""),
+                job.get("description", ""),
+                payload.get("optimization", {}),
+                filename_base=json_path.stem,
+            )
+        else:
+            html_path = generate_scan_report(
+                payload.get("collected_jobs", []),
+                payload.get("analyzed_jobs", []),
+                int(payload.get("min_score", 0) or 0),
+                filename_base=json_path.stem,
+            )
+    except Exception:
+        return None
+
+    payload["html_report"] = _relative_or_absolute(html_path)
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return html_path
 
 
 def list_report_summaries(limit: int = 30) -> List[Dict[str, Any]]:
@@ -247,6 +330,7 @@ def list_report_summaries(limit: int = 30) -> List[Dict[str, Any]]:
         report_type = payload.get("type") or "scan"
         created_at = payload.get("created_at") or ""
         md_path = json_path.with_suffix(".md")
+        html_path = _resolve_html_path(payload, json_path, report_type)
         title = "Varredura de vagas"
         company = ""
         score = None
@@ -278,6 +362,7 @@ def list_report_summaries(limit: int = 30) -> List[Dict[str, Any]]:
             "detail": detail,
             "json_path": json_path,
             "md_path": md_path if md_path.exists() else json_path,
+            "open_path": html_path if html_path and html_path.exists() else md_path if md_path.exists() else json_path,
         })
         if len(reports) >= limit:
             break

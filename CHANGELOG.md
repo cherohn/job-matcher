@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.0.5
+
+- Added Iron-themed HTML reports for scans, manual job analyses, and resume optimizations.
+- Updated the reports tab to open HTML reports in the browser and backfill missing HTML for older reports.
+- Added a 30-day repeated-job blocklist using title, company, source, and full location.
+- Reduced Serper usage by limiting queries and stopping collection once enough new jobs are found.
+- Improved monitoring logs with clearer next-attempt guidance and stop/close instructions.
+- Increased desktop and configuration window sizes by 50px in width and height.
+
 ## 0.0.4
 
 - Redesigned the **Otimizar curriculo** tab with a stable full-width layout for both normal and maximized windows.
