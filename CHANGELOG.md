@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.4
+
+- Redesigned the **Otimizar curriculo** tab with a stable full-width layout for both normal and maximized windows.
+- Added a direct **Otimizar esta vaga** action after manual job analysis.
+- Added a **Relatorios** tab with local history for scans, manual analyses, and resume optimizations.
+- Added quick configuration tests for IA, Serper, and Gmail.
+- Improved the v0.0.4 workflow between analysis, optimization, and saved reports.
+
 ## 0.0.3
 
 - Added the **Otimizar curriculo** desktop tab.

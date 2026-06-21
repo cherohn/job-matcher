@@ -4,6 +4,7 @@ import ctypes
 import logging
 import os
 import queue
+import smtplib
 import sys
 import threading
 import time
@@ -11,10 +12,11 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
+import requests
 from PIL import Image
 
 import main as engine
-from core.report import REPORT_DIR, save_manual_analysis_report, save_resume_optimization_report
+from core.report import REPORT_DIR, list_report_summaries, save_manual_analysis_report, save_resume_optimization_report
 from core.user_config import get_config_path, import_user_file, load_user_config, save_user_config
 
 
@@ -128,6 +130,7 @@ class JobMatcherApp(ctk.CTk):
         self.optimization_company = tk.StringVar()
         self.optimization_worker = None
         self.last_optimization_text = ""
+        self.report_rows = []
         self.nav_buttons = {}
         self.tab_frames = {}
         self.current_tab = "Busca"
@@ -265,10 +268,11 @@ class JobMatcherApp(ctk.CTk):
 
         nav = ctk.CTkFrame(shell, fg_color="transparent")
         nav.grid(row=0, column=0, padx=26, pady=(0, 14), sticky="ew")
-        nav.grid_columnconfigure(3, weight=1)
+        nav.grid_columnconfigure(4, weight=1)
         self._nav_button(nav, 0, "Busca")
         self._nav_button(nav, 1, "Analisar vaga")
         self._nav_button(nav, 2, "Otimizar curriculo")
+        self._nav_button(nav, 3, "Relatorios")
 
         tab_area = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0)
         tab_area.grid(row=1, column=0, sticky="nsew")
@@ -278,10 +282,12 @@ class JobMatcherApp(ctk.CTk):
         search_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         analysis_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         optimization_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
+        reports_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         self.tab_frames = {
             "Busca": search_tab,
             "Analisar vaga": analysis_tab,
             "Otimizar curriculo": optimization_tab,
+            "Relatorios": reports_tab,
         }
 
         main = search_tab
@@ -364,6 +370,7 @@ class JobMatcherApp(ctk.CTk):
 
         self._build_analysis_tab(analysis_tab)
         self._build_optimization_tab(optimization_tab)
+        self._build_reports_tab(reports_tab)
         self._show_tab("Busca")
 
     def _nav_button(self, parent, column, name):
@@ -371,7 +378,7 @@ class JobMatcherApp(ctk.CTk):
             parent,
             text=name,
             height=38,
-            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 86,
+            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 100 if name == "Relatorios" else 86,
             corner_radius=8,
             fg_color=SURFACE,
             hover_color=SURFACE_2,
@@ -388,6 +395,8 @@ class JobMatcherApp(ctk.CTk):
         for frame in self.tab_frames.values():
             frame.grid_forget()
         self.tab_frames[name].grid(row=0, column=0, sticky="nsew")
+        if name == "Relatorios":
+            self.refresh_reports()
         self.current_tab = name
 
         for tab_name, button in self.nav_buttons.items():
@@ -469,7 +478,7 @@ class JobMatcherApp(ctk.CTk):
 
         actions = ctk.CTkFrame(form, fg_color="transparent")
         actions.grid(row=4, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
-        actions.grid_columnconfigure((0, 1, 2), weight=1)
+        actions.grid_columnconfigure((0, 1, 2, 3), weight=1)
         self.analyze_button = ctk.CTkButton(
             actions,
             text="Analisar compatibilidade",
@@ -493,6 +502,20 @@ class JobMatcherApp(ctk.CTk):
             border_color=SURFACE_2,
             command=self.copy_analysis,
         ).grid(row=0, column=1, sticky="ew", padx=(0, 8))
+        self.analysis_optimize_button = ctk.CTkButton(
+            actions,
+            text="Otimizar esta vaga",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            state="disabled",
+            command=self.use_last_analyzed_job,
+        )
+        self.analysis_optimize_button.grid(row=0, column=2, sticky="ew", padx=(0, 8))
         ctk.CTkButton(
             actions,
             text="Limpar",
@@ -504,7 +527,7 @@ class JobMatcherApp(ctk.CTk):
             border_width=1,
             border_color=SURFACE_2,
             command=self.clear_analysis,
-        ).grid(row=0, column=2, sticky="ew")
+        ).grid(row=0, column=3, sticky="ew")
 
         result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
         result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
@@ -546,13 +569,14 @@ class JobMatcherApp(ctk.CTk):
 
     def _build_optimization_tab(self, parent):
         parent.configure(fg_color=BG)
-        parent.grid_columnconfigure(0, weight=6)
-        parent.grid_columnconfigure(1, weight=5)
+        parent.grid_columnconfigure(0, weight=3, minsize=520)
+        parent.grid_columnconfigure(1, weight=2, minsize=320)
         parent.grid_rowconfigure(1, weight=1)
 
         header = ctk.CTkFrame(parent, fg_color="transparent")
         header.grid(row=0, column=0, columnspan=2, padx=26, pady=(26, 16), sticky="ew")
         header.grid_columnconfigure(0, weight=1)
+        header.grid_columnconfigure(1, weight=0)
         ctk.CTkLabel(
             header,
             text="Otimizar curriculo",
@@ -565,34 +589,11 @@ class JobMatcherApp(ctk.CTk):
             font=("Segoe UI", 13),
             text_color=MUTED,
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
-
-        form = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
-        form.grid(row=1, column=0, padx=(26, 10), pady=(0, 24), sticky="nsew")
-        form.grid_columnconfigure((0, 1), weight=1)
-        form.grid_rowconfigure(3, weight=1)
-
-        ctk.CTkLabel(
-            form,
-            text="Vaga alvo",
-            font=("Segoe UI", 17, "bold"),
-            text_color=TEXT,
-        ).grid(row=0, column=0, columnspan=2, padx=18, pady=(18, 2), sticky="w")
-        helper_row = ctk.CTkFrame(form, fg_color="transparent")
-        helper_row.grid(row=1, column=0, columnspan=2, padx=18, pady=(0, 12), sticky="ew")
-        helper_row.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(
-            helper_row,
-            text="Reaproveite a ultima vaga analisada ou cole uma descricao nova para direcionar o curriculo.",
-            font=("Segoe UI", 12),
-            text_color=MUTED,
-            wraplength=520,
-            justify="left",
-        ).grid(row=0, column=0, pady=(0, 0), sticky="w")
         ctk.CTkButton(
-            helper_row,
+            header,
             text="Usar vaga analisada",
             height=38,
-            width=190,
+            width=240,
             corner_radius=8,
             fg_color=SURFACE,
             hover_color=SURFACE_2,
@@ -601,13 +602,35 @@ class JobMatcherApp(ctk.CTk):
             border_color=BORDER,
             font=("Segoe UI", 12, "bold"),
             command=self.use_last_analyzed_job,
-        ).grid(row=0, column=1, padx=(18, 0), pady=(0, 0), sticky="e")
+        ).grid(row=0, column=1, rowspan=2, padx=(20, 0), sticky="e")
 
-        self._text_field(form, 2, 0, "Titulo da vaga", self.optimization_title)
-        self._text_field(form, 2, 1, "Empresa", self.optimization_company)
+        form = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        form.grid(row=1, column=0, padx=(26, 10), pady=(0, 24), sticky="nsew")
+        form.grid_columnconfigure((0, 1), weight=1)
+        form.grid_rowconfigure(2, weight=1, minsize=170)
+
+        form_header = ctk.CTkFrame(form, fg_color="transparent")
+        form_header.grid(row=0, column=0, columnspan=2, padx=18, pady=(18, 10), sticky="ew")
+        form_header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            form_header,
+            text="Vaga alvo",
+            font=("Segoe UI", 18, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            form_header,
+            text="Use a ultima vaga analisada ou cole uma descricao nova para direcionar o curriculo.",
+            font=("Segoe UI", 12),
+            text_color=MUTED,
+            justify="left",
+        ).grid(row=1, column=0, columnspan=2, pady=(5, 0), sticky="w")
+
+        self._text_field(form, 1, 0, "Titulo da vaga", self.optimization_title)
+        self._text_field(form, 1, 1, "Empresa", self.optimization_company)
 
         desc_frame = ctk.CTkFrame(form, fg_color="transparent")
-        desc_frame.grid(row=3, column=0, columnspan=2, padx=18, pady=(0, 14), sticky="nsew")
+        desc_frame.grid(row=2, column=0, columnspan=2, padx=18, pady=(0, 14), sticky="nsew")
         desc_frame.grid_columnconfigure(0, weight=1)
         desc_frame.grid_rowconfigure(1, weight=1)
         ctk.CTkLabel(desc_frame, text="Descricao da vaga", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
@@ -625,7 +648,7 @@ class JobMatcherApp(ctk.CTk):
         self.optimization_description.grid(row=1, column=0, sticky="nsew", pady=(6, 0))
 
         actions = ctk.CTkFrame(form, fg_color="transparent")
-        actions.grid(row=4, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
+        actions.grid(row=3, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
         actions.grid_columnconfigure((0, 1, 2), weight=1)
         self.optimize_button = ctk.CTkButton(
             actions,
@@ -700,6 +723,49 @@ class JobMatcherApp(ctk.CTk):
             "O app vai sugerir headline, resumo, skills, bullets e alertas de honestidade.\n",
         )
         self.optimization_result_box.configure(state="disabled")
+
+    def _build_reports_tab(self, parent):
+        parent.configure(fg_color=BG)
+        parent.grid_columnconfigure(0, weight=1)
+        parent.grid_rowconfigure(1, weight=1)
+
+        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header.grid(row=0, column=0, padx=26, pady=(26, 16), sticky="ew")
+        header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            header,
+            text="Relatorios",
+            font=("Segoe UI", 26, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            header,
+            text="Historico local das varreduras, analises manuais e otimizacoes de curriculo.",
+            font=("Segoe UI", 13),
+            text_color=MUTED,
+        ).grid(row=1, column=0, pady=(6, 0), sticky="w")
+        ctk.CTkButton(
+            header,
+            text="Atualizar",
+            width=110,
+            height=36,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=BORDER,
+            command=self.refresh_reports,
+        ).grid(row=0, column=1, rowspan=2, sticky="e")
+
+        panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        panel.grid(row=1, column=0, padx=26, pady=(0, 24), sticky="nsew")
+        panel.grid_columnconfigure(0, weight=1)
+        panel.grid_rowconfigure(0, weight=1)
+
+        self.reports_list = ctk.CTkScrollableFrame(panel, fg_color="transparent")
+        self.reports_list.grid(row=0, column=0, padx=18, pady=18, sticky="nsew")
+        self.reports_list.grid_columnconfigure(0, weight=1)
 
     def _text_field(self, parent, row, column, label, variable):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -798,6 +864,86 @@ class JobMatcherApp(ctk.CTk):
         add_entry("email_remetente", "Gmail remetente")
         add_entry("email_senha_app", "Senha de app do Gmail", secret=True)
         add_entry("email_destinatario", "E-mail que recebera os matches")
+
+        test_status = tk.StringVar(value="Teste cada servico quando quiser validar a configuracao.")
+
+        def run_config_test(kind):
+            def worker():
+                try:
+                    if kind == "ia":
+                        key = fields["groq_api_key"].get().strip()
+                        model = fields["groq_model"].get().strip() or "llama-3.3-70b-versatile"
+                        if not key:
+                            raise ValueError("Informe a API da IA antes de testar.")
+                        from groq import Groq
+                        client = Groq(api_key=key)
+                        client.chat.completions.create(
+                            model=model,
+                            messages=[{"role": "user", "content": "Responda apenas OK."}],
+                            temperature=0,
+                            max_tokens=8,
+                        )
+                        message = "IA funcionando."
+                    elif kind == "serper":
+                        key = fields["serper_api_key"].get().strip()
+                        if not key:
+                            raise ValueError("Informe a API Serper antes de testar.")
+                        response = requests.post(
+                            "https://google.serper.dev/search",
+                            headers={"X-API-KEY": key, "Content-Type": "application/json"},
+                            json={"q": "site:linkedin.com/jobs Java developer", "num": 1},
+                            timeout=20,
+                        )
+                        if response.status_code >= 400:
+                            raise ValueError(f"Serper retornou HTTP {response.status_code}.")
+                        message = "Serper funcionando."
+                    else:
+                        sender = fields["email_remetente"].get().strip()
+                        password = fields["email_senha_app"].get().strip()
+                        if not sender or not password:
+                            raise ValueError("Informe Gmail remetente e senha de app antes de testar.")
+                        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as smtp:
+                            smtp.login(sender, password)
+                        message = "Gmail funcionando."
+                    self.after(0, test_status.set, message)
+                    self.after(0, messagebox.showinfo, "Job Matcher", message)
+                except Exception as exc:
+                    error = f"Teste falhou: {exc}"
+                    self.after(0, test_status.set, error)
+                    self.after(0, messagebox.showerror, "Job Matcher", error)
+
+            test_status.set("Testando, aguarde...")
+            threading.Thread(target=worker, daemon=True).start()
+
+        test_panel = ctk.CTkFrame(body, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        test_panel.grid(row=row, column=0, sticky="ew", pady=(0, 12))
+        test_panel.grid_columnconfigure((0, 1, 2), weight=1)
+        ctk.CTkLabel(
+            test_panel,
+            text="Testes rapidos",
+            text_color=TEXT,
+            font=("Segoe UI", 14, "bold"),
+        ).grid(row=0, column=0, columnspan=3, padx=14, pady=(12, 2), sticky="w")
+        ctk.CTkLabel(
+            test_panel,
+            textvariable=test_status,
+            text_color=MUTED,
+            font=("Segoe UI", 12),
+        ).grid(row=1, column=0, columnspan=3, padx=14, pady=(0, 10), sticky="w")
+        for col, (label, kind) in enumerate((("Testar IA", "ia"), ("Testar Serper", "serper"), ("Testar Gmail", "gmail"))):
+            ctk.CTkButton(
+                test_panel,
+                text=label,
+                height=36,
+                corner_radius=8,
+                fg_color=SURFACE,
+                hover_color=SURFACE_2,
+                text_color=TEXT,
+                border_width=1,
+                border_color=BORDER,
+                command=lambda selected=kind: run_config_test(selected),
+            ).grid(row=2, column=col, padx=(14 if col == 0 else 6, 14 if col == 2 else 6), pady=(0, 14), sticky="ew")
+        row += 1
 
         ctk.CTkLabel(body, text="Busca", font=("Segoe UI", 16, "bold"), text_color=TEXT).grid(row=row, column=0, sticky="w", pady=(8, 8))
         row += 1
@@ -1084,6 +1230,9 @@ class JobMatcherApp(ctk.CTk):
         self.analysis_company.set("")
         self.analysis_description.delete("1.0", "end")
         self.last_analysis_text = ""
+        self.last_job_context = None
+        if hasattr(self, "analysis_optimize_button"):
+            self.analysis_optimize_button.configure(state="disabled")
         self.analysis_status.set("Cole uma vaga e clique em Analisar.")
         self._set_analysis_result(
             "A analise vai aparecer aqui.\n\n"
@@ -1153,6 +1302,70 @@ class JobMatcherApp(ctk.CTk):
         logging.info("Abrindo pasta de relatorios: %s", path)
         os.startfile(str(path))
 
+    def refresh_reports(self):
+        if not hasattr(self, "reports_list"):
+            return
+        for child in self.reports_list.winfo_children():
+            child.destroy()
+
+        reports = list_report_summaries()
+        if not reports:
+            ctk.CTkLabel(
+                self.reports_list,
+                text="Nenhum relatorio gerado ainda.",
+                text_color=MUTED,
+                font=("Segoe UI", 13),
+            ).grid(row=0, column=0, sticky="w", pady=(0, 8))
+            return
+
+        for index, report in enumerate(reports):
+            row = ctk.CTkFrame(self.reports_list, fg_color=SURFACE, corner_radius=8, border_width=1, border_color=BORDER)
+            row.grid(row=index, column=0, sticky="ew", pady=(0, 10))
+            row.grid_columnconfigure(0, weight=1)
+
+            title = report.get("title") or "Relatorio"
+            company = report.get("company") or ""
+            score = report.get("score")
+            title_line = title if not company else f"{title} @ {company}"
+            if score is not None:
+                title_line = f"{score}% - {title_line}"
+
+            ctk.CTkLabel(
+                row,
+                text=title_line,
+                text_color=TEXT,
+                font=("Segoe UI", 14, "bold"),
+                anchor="w",
+            ).grid(row=0, column=0, padx=14, pady=(12, 2), sticky="ew")
+            ctk.CTkLabel(
+                row,
+                text=f"{report.get('detail', '')} | {report.get('created_at', '')}",
+                text_color=MUTED,
+                font=("Segoe UI", 12),
+                anchor="w",
+            ).grid(row=1, column=0, padx=14, pady=(0, 12), sticky="ew")
+            ctk.CTkButton(
+                row,
+                text="Abrir",
+                width=90,
+                height=34,
+                corner_radius=8,
+                fg_color=BG,
+                hover_color=SURFACE_2,
+                text_color=TEXT,
+                border_width=1,
+                border_color=BORDER,
+                command=lambda path=report.get("md_path"): self.open_report_file(path),
+            ).grid(row=0, column=1, rowspan=2, padx=14, pady=12, sticky="e")
+
+    def open_report_file(self, path):
+        if not path:
+            return
+        try:
+            os.startfile(str(path))
+        except Exception as exc:
+            messagebox.showerror("Job Matcher", f"Nao foi possivel abrir o relatorio:\n{exc}")
+
     def _analysis_worker(self, title, company, description):
         try:
             result = engine.analyze_manual_job(title, company, description)
@@ -1167,7 +1380,9 @@ class JobMatcherApp(ctk.CTk):
             }
             self.last_analysis_text = output
             self.after(0, self._set_analysis_result, output)
+            self.after(0, lambda: self.analysis_optimize_button.configure(state="normal"))
             self.after(0, self.analysis_status.set, f"Analise salva em reports/{report_md.name}. Voce pode otimizar essa vaga na aba Otimizar curriculo.")
+            self.after(0, self.refresh_reports)
         except Exception as exc:
             self.after(0, messagebox.showerror, "Job Matcher", str(exc))
             self.after(0, self.analysis_status.set, "Nao foi possivel analisar esta vaga.")
@@ -1184,6 +1399,7 @@ class JobMatcherApp(ctk.CTk):
             self.last_optimization_text = output
             self.after(0, self._set_optimization_result, output)
             self.after(0, self.optimization_status.set, f"Otimizacao concluida e salva em reports/{report_md.name}.")
+            self.after(0, self.refresh_reports)
         except Exception as exc:
             self.after(0, messagebox.showerror, "Job Matcher", str(exc))
             self.after(0, self.optimization_status.set, "Nao foi possivel otimizar para esta vaga.")

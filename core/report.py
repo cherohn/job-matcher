@@ -233,3 +233,52 @@ def save_resume_optimization_report(
 
     md_path.write_text("\n".join(lines), encoding="utf-8")
     return json_path, md_path
+
+
+def list_report_summaries(limit: int = 30) -> List[Dict[str, Any]]:
+    REPORT_DIR.mkdir(exist_ok=True)
+    reports = []
+    for json_path in sorted(REPORT_DIR.glob("*.json"), key=lambda path: path.stat().st_mtime, reverse=True):
+        try:
+            payload = json.loads(json_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        report_type = payload.get("type") or "scan"
+        created_at = payload.get("created_at") or ""
+        md_path = json_path.with_suffix(".md")
+        title = "Varredura de vagas"
+        company = ""
+        score = None
+        detail = ""
+
+        if report_type == "manual_job_analysis":
+            job = payload.get("job", {})
+            analysis = payload.get("analysis", {})
+            title = job.get("title") or "Vaga analisada"
+            company = job.get("company") or ""
+            score = analysis.get("score")
+            detail = "Analise manual"
+        elif report_type == "resume_optimization":
+            job = payload.get("job", {})
+            title = job.get("title") or "Curriculo otimizado"
+            company = job.get("company") or ""
+            detail = "Otimizacao de curriculo"
+        else:
+            matches = payload.get("matches_count", 0)
+            analyzed = payload.get("analyzed_count", 0)
+            detail = f"Varredura: {matches} match(es), {analyzed} analisada(s)"
+
+        reports.append({
+            "type": report_type,
+            "created_at": created_at,
+            "title": title,
+            "company": company,
+            "score": score,
+            "detail": detail,
+            "json_path": json_path,
+            "md_path": md_path if md_path.exists() else json_path,
+        })
+        if len(reports) >= limit:
+            break
+    return reports

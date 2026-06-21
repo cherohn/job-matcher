@@ -22,6 +22,7 @@ Na interface desktop, tambem existem abas para uso manual:
 
 - `Analisar vaga`: cola uma vaga especifica e recebe um diagnostico de compatibilidade.
 - `Otimizar curriculo`: cola uma vaga especifica e recebe sugestoes de headline, resumo, skills e bullets baseadas no curriculo/perfil atual.
+- `Relatorios`: mostra o historico local de varreduras, analises e otimizacoes.
 
 A otimizacao nao deve inventar experiencia. Ela serve para reposicionar e reescrever melhor o que ja existe.
 
@@ -47,6 +48,8 @@ Voce precisa de:
 
 O modelo padrao usado pelo app e `llama-3.3-70b-versatile`.
 
+Na tela `Configurar`, use `Testar IA` para confirmar se a chave e o modelo estao funcionando.
+
 ## 4. Como pegar API key do Serper
 
 1. Acesse `https://serper.dev`.
@@ -57,6 +60,8 @@ O modelo padrao usado pelo app e `llama-3.3-70b-versatile`.
 6. Cole a chave no campo `API Serper`.
 
 O Serper e usado para pesquisar vagas no Google de forma automatizada. Sem essa chave, a fonte principal de busca nao funciona.
+
+Na tela `Configurar`, use `Testar Serper` para validar a chave antes de iniciar uma busca.
 
 ## 5. Como criar senha de app do Gmail
 
@@ -74,6 +79,8 @@ A senha de app nao e sua senha normal do Gmail. Ela e uma senha separada, criada
 No campo `Gmail remetente`, coloque o Gmail que vai enviar as mensagens.
 
 No campo `E-mail que recebera os matches`, coloque o e-mail que vai receber os resultados. Pode ser o mesmo Gmail.
+
+Na tela `Configurar`, use `Testar Gmail` para conferir se o login SMTP esta correto.
 
 ## 6. Como preparar o arquivo TXT de perfil
 
@@ -209,15 +216,23 @@ Na aba `Analisar vaga`:
 2. Informe titulo e empresa se quiser.
 3. Clique em `Analisar compatibilidade`.
 4. O app mostra score, pontos fortes, gaps, melhorias recomendadas e proxima acao.
-5. A analise tambem e salva em `reports/` como JSON e Markdown.
+5. Clique em `Otimizar esta vaga` se quiser levar a mesma vaga direto para a aba de otimizacao.
+6. A analise tambem e salva em `reports/` como JSON e Markdown.
 
 Na aba `Otimizar curriculo`:
 
 1. Cole a descricao completa da vaga.
-2. Informe titulo e empresa se quiser.
-3. Clique em `Gerar otimizacao`.
-4. O app sugere headline, resumo profissional, skills prioritarias, experiencias para priorizar, bullets sugeridos, itens para reduzir e avisos de honestidade.
-5. A otimizacao tambem e salva em `reports/` como JSON e Markdown.
+2. Ou clique em `Usar vaga analisada` para reaproveitar a ultima vaga analisada.
+3. Informe titulo e empresa se quiser.
+4. Clique em `Gerar otimizacao`.
+5. O app sugere headline, resumo profissional, skills prioritarias, experiencias para priorizar, bullets sugeridos, itens para reduzir e avisos de honestidade.
+6. A otimizacao tambem e salva em `reports/` como JSON e Markdown.
+
+Na aba `Relatorios`:
+
+1. Veja os ultimos relatorios locais.
+2. Clique em `Abrir` para abrir o Markdown daquele relatorio.
+3. Clique em `Atualizar` se acabou de gerar algo novo.
 
 Use os botoes de copiar para levar o texto para um editor de curriculo. Revise tudo antes de usar.
 
