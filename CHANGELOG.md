@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.0.7
+
+- Added contextual cover letter generation from the manual job analysis tab.
+- Uses the configured profile, resume PDF text, and pasted job description to generate a job-specific letter.
+- Validates word count locally and flags forbidden generic phrases with `[REVISAR]`.
+- Generates Iron-themed cover letter HTML reports and adds them to the local reports history.
+
 ## 0.0.6
 
 - Added the ATS simulator from the manual job analysis tab.

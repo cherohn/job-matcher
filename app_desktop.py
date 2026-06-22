@@ -131,6 +131,7 @@ class JobMatcherApp(ctk.CTk):
         self.analysis_company = tk.StringVar()
         self.analysis_worker = None
         self.ats_worker = None
+        self.cover_letter_worker = None
         self.last_analysis_text = ""
         self.last_job_context = None
         self.optimization_status = tk.StringVar(value="Cole uma vaga e gere uma otimizacao.")
@@ -495,7 +496,7 @@ class JobMatcherApp(ctk.CTk):
 
         actions = ctk.CTkFrame(form, fg_color="transparent")
         actions.grid(row=4, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
-        actions.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
+        actions.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
         self.analyze_button = ctk.CTkButton(
             actions,
             text="Analisar compatibilidade",
@@ -520,6 +521,19 @@ class JobMatcherApp(ctk.CTk):
             command=self.simulate_ats,
         )
         self.ats_button.grid(row=0, column=1, sticky="ew", padx=(0, 8))
+        self.cover_letter_button = ctk.CTkButton(
+            actions,
+            text="Gerar carta",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            command=self.generate_cover_letter,
+        )
+        self.cover_letter_button.grid(row=0, column=2, sticky="ew", padx=(0, 8))
         ctk.CTkButton(
             actions,
             text="Copiar analise",
@@ -531,7 +545,7 @@ class JobMatcherApp(ctk.CTk):
             border_width=1,
             border_color=SURFACE_2,
             command=self.copy_analysis,
-        ).grid(row=0, column=2, sticky="ew", padx=(0, 8))
+        ).grid(row=0, column=3, sticky="ew", padx=(0, 8))
         self.analysis_optimize_button = ctk.CTkButton(
             actions,
             text="Otimizar esta vaga",
@@ -545,7 +559,7 @@ class JobMatcherApp(ctk.CTk):
             state="disabled",
             command=self.use_last_analyzed_job,
         )
-        self.analysis_optimize_button.grid(row=0, column=3, sticky="ew", padx=(0, 8))
+        self.analysis_optimize_button.grid(row=0, column=4, sticky="ew", padx=(0, 8))
         ctk.CTkButton(
             actions,
             text="Limpar",
@@ -557,7 +571,7 @@ class JobMatcherApp(ctk.CTk):
             border_width=1,
             border_color=SURFACE_2,
             command=self.clear_analysis,
-        ).grid(row=0, column=4, sticky="ew")
+        ).grid(row=0, column=5, sticky="ew")
 
         result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
         result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
@@ -1274,6 +1288,25 @@ class JobMatcherApp(ctk.CTk):
         )
         self.ats_worker.start()
 
+    def generate_cover_letter(self):
+        if self.cover_letter_worker and self.cover_letter_worker.is_alive():
+            messagebox.showinfo("Job Matcher", "A carta atual ainda esta em geracao.")
+            return
+
+        description = self.analysis_description.get("1.0", "end").strip()
+        if len(description) < 80:
+            messagebox.showinfo("Job Matcher", "Cole uma descricao de vaga mais completa antes de gerar carta.")
+            return
+
+        self.analysis_status.set("Gerando carta contextualizada...")
+        self.cover_letter_button.configure(state="disabled", text="Gerando...")
+        self.cover_letter_worker = threading.Thread(
+            target=self._cover_letter_worker,
+            args=(self.analysis_title.get().strip(), self.analysis_company.get().strip(), description),
+            daemon=True,
+        )
+        self.cover_letter_worker.start()
+
     def clear_analysis(self):
         self.analysis_title.set("")
         self.analysis_company.set("")
@@ -1455,6 +1488,19 @@ class JobMatcherApp(ctk.CTk):
         finally:
             self.after(0, lambda: self.ats_button.configure(state="normal", text="Simular ATS"))
 
+    def _cover_letter_worker(self, title, company, description):
+        try:
+            result = engine.generate_manual_cover_letter(title, company, description)
+            output = self._format_cover_letter_result(title, company, result)
+            self.after(0, self._set_analysis_result, output)
+            self.after(0, self.analysis_status.set, f"Carta salva em {result.html_path}.")
+            self.after(0, self.refresh_reports)
+        except Exception as exc:
+            self.after(0, messagebox.showerror, "Job Matcher", str(exc))
+            self.after(0, self.analysis_status.set, "Nao foi possivel gerar carta para esta vaga.")
+        finally:
+            self.after(0, lambda: self.cover_letter_button.configure(state="normal", text="Gerar carta"))
+
     def _optimization_worker(self, title, company, description):
         try:
             result = engine.optimize_manual_resume(title, company, description)
@@ -1512,6 +1558,25 @@ class JobMatcherApp(ctk.CTk):
         self._append_section(lines, "Keywords presentes", result.keywords_presentes)
         self._append_section(lines, "Keywords ausentes", result.keywords_ausentes)
         self._append_section(lines, "Avisos de formato do PDF", result.avisos_pdf)
+        lines.append("Relatorio HTML")
+        lines.append(f"- {result.html_path}")
+        return "\n".join(lines).strip() + "\n"
+
+    def _format_cover_letter_result(self, title, company, result):
+        lines = []
+        heading = title or "Vaga analisada"
+        if company:
+            heading = f"{heading} @ {company}"
+        lines.append(f"Carta de apresentacao - {heading}")
+        lines.append("")
+        lines.append(f"Idioma detectado: {result.idioma}")
+        lines.append(f"Palavras: {result.word_count}")
+        lines.append("")
+        if result.avisos:
+            self._append_section(lines, "Avisos para revisar", result.avisos)
+        lines.append("Carta")
+        lines.append(result.carta or "Nao gerada.")
+        lines.append("")
         lines.append("Relatorio HTML")
         lines.append(f"- {result.html_path}")
         return "\n".join(lines).strip() + "\n"

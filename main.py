@@ -24,6 +24,7 @@ from core.job_analyzer import SingleJobAnalysis
 from core.matcher import calculate_match
 from core.resume_optimizer import optimize_resume_for_job
 from core.ats_simulator import simulate_ats_for_job
+from core.cover_letter import create_cover_letter_for_job
 from core.query_builder import build_search_queries
 from core.resume_parser import build_profile
 from core.user_config import is_configured, load_user_config
@@ -197,6 +198,31 @@ def simulate_manual_ats(job_title, job_company, job_description):
         raise ValueError("Cole uma descricao de vaga mais completa antes de simular ATS.")
 
     return simulate_ats_for_job(
+        resume_pdf_path=resume_path,
+        job_title=job_title,
+        job_company=job_company,
+        job_description=job_description,
+        groq_api_key=GROQ_API_KEY,
+        model_name=GROQ_MODEL,
+        open_browser=True,
+    )
+
+def generate_manual_cover_letter(job_title, job_company, job_description):
+    refresh_runtime_settings()
+    if not GROQ_API_KEY:
+        raise ValueError("Configure a API da IA antes de gerar carta.")
+    if not PROFILE:
+        reload_profile()
+    if not PROFILE:
+        raise ValueError("Configure um perfil TXT, texto de perfil ou curriculo antes de gerar carta.")
+    resume_path = getattr(settings, "RESUME_PDF_PATH", None)
+    if not resume_path:
+        raise ValueError("Configure um curriculo PDF antes de gerar carta.")
+    if not job_description or len(job_description.strip()) < 80:
+        raise ValueError("Cole uma descricao de vaga mais completa antes de gerar carta.")
+
+    return create_cover_letter_for_job(
+        profile_text=PROFILE,
         resume_pdf_path=resume_path,
         job_title=job_title,
         job_company=job_company,

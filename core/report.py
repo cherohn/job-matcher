@@ -305,6 +305,8 @@ def _resolve_html_path(payload: Dict[str, Any], json_path: Path, report_type: st
             )
         elif report_type == "ats_simulation":
             return None
+        elif report_type == "cover_letter":
+            return None
         else:
             html_path = generate_scan_report(
                 payload.get("collected_jobs", []),
@@ -357,6 +359,12 @@ def list_report_summaries(limit: int = 30) -> List[Dict[str, Any]]:
             company = job.get("company") or ""
             score = analysis.get("coverage_score")
             detail = "Simulacao ATS"
+        elif report_type == "cover_letter":
+            job = payload.get("job", {})
+            letter = payload.get("letter", {})
+            title = job.get("title") or "Carta de apresentacao"
+            company = job.get("company") or ""
+            detail = f"Carta | {letter.get('idioma', 'idioma nao informado')} | {letter.get('word_count', 0)} palavras"
         else:
             matches = payload.get("matches_count", 0)
             analyzed = payload.get("analyzed_count", 0)
