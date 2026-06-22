@@ -148,6 +148,8 @@ class JobMatcherApp(ctk.CTk):
         self.optimization_company = tk.StringVar()
         self.optimization_worker = None
         self.last_optimization_text = ""
+        self.market_status = tk.StringVar(value="Historico pronto para analisar.")
+        self.market_worker = None
         self.selected_application_id = None
         self.tracker_cards = {}
         self.report_rows = []
@@ -307,12 +309,13 @@ class JobMatcherApp(ctk.CTk):
 
         nav = ctk.CTkFrame(shell, fg_color="transparent")
         nav.grid(row=0, column=0, padx=26, pady=(0, 14), sticky="ew")
-        nav.grid_columnconfigure(5, weight=1)
+        nav.grid_columnconfigure(6, weight=1)
         self._nav_button(nav, 0, "Busca")
         self._nav_button(nav, 1, "Analisar vaga")
         self._nav_button(nav, 2, "Otimizar curriculo")
         self._nav_button(nav, 3, "Candidaturas")
-        self._nav_button(nav, 4, "Relatorios")
+        self._nav_button(nav, 4, "Mercado")
+        self._nav_button(nav, 5, "Relatorios")
 
         tab_area = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0)
         tab_area.grid(row=1, column=0, sticky="nsew")
@@ -323,12 +326,14 @@ class JobMatcherApp(ctk.CTk):
         analysis_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         optimization_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         tracker_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
+        trends_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         reports_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         self.tab_frames = {
             "Busca": search_tab,
             "Analisar vaga": analysis_tab,
             "Otimizar curriculo": optimization_tab,
             "Candidaturas": tracker_tab,
+            "Mercado": trends_tab,
             "Relatorios": reports_tab,
         }
 
@@ -413,6 +418,7 @@ class JobMatcherApp(ctk.CTk):
         self._build_analysis_tab(analysis_tab)
         self._build_optimization_tab(optimization_tab)
         self._build_tracker_tab(tracker_tab)
+        self._build_trends_tab(trends_tab)
         self._build_reports_tab(reports_tab)
         self._show_tab("Busca")
 
@@ -421,7 +427,7 @@ class JobMatcherApp(ctk.CTk):
             parent,
             text=name,
             height=38,
-            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 126 if name == "Candidaturas" else 100 if name == "Relatorios" else 86,
+            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 126 if name == "Candidaturas" else 100 if name in {"Relatorios", "Mercado"} else 86,
             corner_radius=8,
             fg_color=SURFACE,
             hover_color=SURFACE_2,
@@ -442,6 +448,8 @@ class JobMatcherApp(ctk.CTk):
             self.refresh_reports()
         if name == "Candidaturas":
             self.refresh_tracker()
+        if name == "Mercado":
+            self.refresh_trends_tab()
         self.current_tab = name
 
         for tab_name, button in self.nav_buttons.items():
@@ -938,6 +946,74 @@ class JobMatcherApp(ctk.CTk):
             text_color=TEXT,
             font=("Segoe UI", 12),
         ).grid(row=1, column=0, sticky="ew", pady=(6, 0))
+
+    def _build_trends_tab(self, parent):
+        parent.configure(fg_color=BG)
+        parent.grid_columnconfigure(0, weight=1)
+        parent.grid_rowconfigure(2, weight=1)
+
+        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header.grid(row=0, column=0, padx=26, pady=(26, 16), sticky="ew")
+        header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            header,
+            text="Mercado",
+            font=("Segoe UI", 26, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            header,
+            textvariable=self.market_status,
+            font=("Segoe UI", 13),
+            text_color=MUTED,
+        ).grid(row=1, column=0, pady=(6, 0), sticky="w")
+
+        summary = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        summary.grid(row=1, column=0, padx=26, pady=(0, 16), sticky="ew")
+        summary.grid_columnconfigure(0, weight=1)
+        self.market_new_jobs = tk.StringVar(value="Vagas novas para tendencias: -")
+        ctk.CTkLabel(summary, textvariable=self.market_new_jobs, text_color=TEXT, font=("Segoe UI", 17, "bold")).grid(
+            row=0, column=0, padx=18, pady=(16, 2), sticky="w"
+        )
+        ctk.CTkLabel(
+            summary,
+            text="O relatorio usa os scans salvos, processa vagas novas em lotes de 10 e abre um HTML no navegador.",
+            text_color=MUTED,
+            font=("Segoe UI", 12),
+        ).grid(row=1, column=0, padx=18, pady=(0, 16), sticky="w")
+        self.market_button = ctk.CTkButton(
+            summary,
+            text="Gerar relatorio de mercado",
+            height=38,
+            corner_radius=8,
+            fg_color=ACCENT,
+            hover_color=ACCENT_DIM,
+            text_color=BG,
+            command=self.generate_market_trends,
+        )
+        self.market_button.grid(row=0, column=1, rowspan=2, padx=18, pady=16, sticky="e")
+
+        log_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        log_panel.grid(row=2, column=0, padx=26, pady=(0, 24), sticky="nsew")
+        log_panel.grid_columnconfigure(0, weight=1)
+        log_panel.grid_rowconfigure(1, weight=1)
+        ctk.CTkLabel(log_panel, text="Progresso", text_color=TEXT, font=("Segoe UI", 17, "bold")).grid(
+            row=0, column=0, padx=18, pady=(18, 8), sticky="w"
+        )
+        self.market_log = ctk.CTkTextbox(
+            log_panel,
+            corner_radius=8,
+            fg_color=BG,
+            border_width=1,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 12),
+            wrap="word",
+        )
+        self.market_log.grid(row=1, column=0, padx=18, pady=(0, 18), sticky="nsew")
+        self.market_log.insert("end", "Aguardando geracao de relatorio.\n")
+        self.market_log.configure(state="disabled")
+        self.refresh_trends_tab()
 
     def _build_reports_tab(self, parent):
         parent.configure(fg_color=BG)
@@ -1720,6 +1796,55 @@ class JobMatcherApp(ctk.CTk):
             return
         update_application(self.selected_application_id, {"status": status})
         self.refresh_tracker()
+
+    def refresh_trends_tab(self):
+        if not hasattr(self, "market_new_jobs"):
+            return
+        try:
+            count = engine.count_new_market_trend_jobs()
+            self.market_new_jobs.set(f"Vagas novas para tendencias: {count}")
+        except Exception as exc:
+            self.market_new_jobs.set("Vagas novas para tendencias: erro ao contar")
+            self.market_status.set(str(exc))
+
+    def generate_market_trends(self):
+        if self.market_worker and self.market_worker.is_alive():
+            messagebox.showinfo("Job Matcher", "O relatorio de mercado ainda esta sendo gerado.")
+            return
+        self.market_status.set("Gerando relatorio de mercado...")
+        self.market_button.configure(state="disabled", text="Gerando...")
+        self._set_market_log("Iniciando processamento em lotes...\n")
+        self.market_worker = threading.Thread(target=self._market_worker, daemon=True)
+        self.market_worker.start()
+
+    def _market_worker(self):
+        try:
+            def progress(message):
+                self.after(0, self._append_market_log, message)
+
+            html_path, summary = engine.generate_manual_market_trends(progress=progress)
+            self.after(0, self._append_market_log, f"Relatorio aberto: {html_path}")
+            self.after(0, self.market_status.set, f"Relatorio gerado com {summary.get('total_jobs', 0)} vaga(s) analisada(s).")
+            self.after(0, self.refresh_reports)
+            self.after(0, self.refresh_trends_tab)
+        except Exception as exc:
+            self.after(0, self._append_market_log, f"Erro: {exc}")
+            self.after(0, self.market_status.set, "Nao foi possivel gerar o relatorio de mercado.")
+            self.after(0, messagebox.showerror, "Job Matcher", str(exc))
+        finally:
+            self.after(0, lambda: self.market_button.configure(state="normal", text="Gerar relatorio de mercado"))
+
+    def _set_market_log(self, text):
+        self.market_log.configure(state="normal")
+        self.market_log.delete("1.0", "end")
+        self.market_log.insert("end", text)
+        self.market_log.configure(state="disabled")
+
+    def _append_market_log(self, text):
+        self.market_log.configure(state="normal")
+        self.market_log.insert("end", f"{text}\n")
+        self.market_log.see("end")
+        self.market_log.configure(state="disabled")
 
     def refresh_reports(self):
         if not hasattr(self, "reports_list"):

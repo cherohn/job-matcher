@@ -4,13 +4,13 @@
 
 ### Cansado de mandar curriculo no escuro?
 
-**Versao:** `0.0.8`
+**Versao:** `0.0.9`
 
 O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores matches por e-mail automaticamente, enquanto voce faz outra coisa.
 
 <br>
 
-[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.8-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.8)
+[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.9-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.9)
 
 *Gratuito · Sem instalacao · Traga suas proprias APIs*
 
@@ -34,7 +34,7 @@ Nao encontrei nada assim. Entao construi.
 
 <div align="center">
 
-### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.8)
+### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.9)
 
 </div>
 
@@ -111,6 +111,42 @@ Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras
 A analise manual nao cria um novo curriculo. Ela apenas explica o que melhorar, destacar, reduzir ou verificar no curriculo atual.
 
 A otimizacao de curriculo sugere headline, resumo, skills e bullets com base no perfil existente. Ela nao inventa experiencias e ainda nao exporta DOCX/PDF.
+
+---
+
+## Ultimas 5 partes criadas
+
+### Parte 1 - Relatorios bonitos em HTML
+
+O app agora gera relatorios em HTML com visual escuro na paleta Iron. Eles abrem direto no navegador e ficam mais faceis de ler do que arquivos simples de texto.
+
+Tambem foi adicionada uma memoria local de vagas vistas por 30 dias. Isso ajuda a evitar que a mesma vaga apareca de novo toda hora, inclusive considerando empresa, cargo e localizacao.
+
+### Parte 2 - Simulador ATS
+
+O app consegue simular como um filtro automatico de curriculos provavelmente leria seu PDF para uma vaga especifica.
+
+Ele mostra cobertura de palavras importantes, risco, pontos presentes, pontos ausentes e avisos quando o curriculo pode ter algum problema de leitura.
+
+### Parte 3 - Carta de apresentacao
+
+Depois de analisar uma vaga, o app pode gerar uma carta de apresentacao contextualizada para aquela oportunidade.
+
+A carta usa seu perfil, seu curriculo e a descricao da vaga. O app tambem avisa quando o texto ficou generico demais ou precisa de revisao.
+
+### Parte 4 - Controle de candidaturas
+
+O app ganhou uma aba **Candidaturas** para acompanhar as vagas em que voce se candidatou.
+
+Voce pode registrar uma vaga analisada, mover entre etapas, guardar contato, notas e proxima acao. O painel tambem mostra metricas simples e alertas de follow-up quando uma candidatura fica parada por muitos dias.
+
+### Parte 5 - Tendencias de mercado
+
+O app agora olha para o historico das vagas encontradas e gera um relatorio de mercado.
+
+Esse relatorio mostra tecnologias mais pedidas, senioridades mais comuns, modalidade de trabalho, empresas frequentes e possiveis lacunas entre o que o mercado pede e o que aparece no seu perfil.
+
+Ele evita retrabalho: vagas ja analisadas nao sao processadas de novo.
 
 ---
 
@@ -260,13 +296,14 @@ job-matcher/
 
 ---
 
-## Limitacoes conhecidas (v0.0.8)
+## Limitacoes conhecidas (v0.0.9)
 
 - Monitoramento continuo exige que o app fique aberto e o computador ligado.
 - Cache local: se deletar `job_cache.json`, vagas antigas podem reaparecer antes do bloqueio de 30 dias.
 - Protecao de credenciais com DPAPI funciona so no Windows por enquanto.
 - Se um site de vagas mudar a URL, a mesma vaga pode parecer nova.
 - A aba **Otimizar curriculo** gera texto e relatorio, mas ainda nao exporta DOCX/PDF.
+- A aba **Mercado** depende do historico de varreduras; se ainda houver poucas vagas salvas, o relatorio tambem sera pequeno.
 
 ---
 

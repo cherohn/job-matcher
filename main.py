@@ -25,6 +25,7 @@ from core.matcher import calculate_match
 from core.resume_optimizer import optimize_resume_for_job
 from core.ats_simulator import simulate_ats_for_job
 from core.cover_letter import create_cover_letter_for_job
+from core.market_trends import count_new_jobs, generate_market_report
 from core.query_builder import build_search_queries
 from core.resume_parser import build_profile
 from core.user_config import is_configured, load_user_config
@@ -229,6 +230,23 @@ def generate_manual_cover_letter(job_title, job_company, job_description):
         job_description=job_description,
         groq_api_key=GROQ_API_KEY,
         model_name=GROQ_MODEL,
+        open_browser=True,
+    )
+
+def count_new_market_trend_jobs():
+    return count_new_jobs()
+
+def generate_manual_market_trends(progress=None):
+    refresh_runtime_settings()
+    if not GROQ_API_KEY:
+        raise ValueError("Configure a API da IA antes de gerar tendencias.")
+    if not PROFILE:
+        reload_profile()
+    return generate_market_report(
+        profile_text=PROFILE,
+        groq_api_key=GROQ_API_KEY,
+        model_name=GROQ_MODEL,
+        progress=progress,
         open_browser=True,
     )
 

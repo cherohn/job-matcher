@@ -794,19 +794,27 @@ def generate_market_trends_report(data: Mapping[str, Any], filename_base: str, o
     technologies = list(data.get("technologies") or data.get("tecnologias") or [])
     gaps = _items(data.get("skill_gaps") or data.get("gaps"))
 
-    bars = []
-    for item in technologies[:15]:
-        if isinstance(item, Mapping):
-            name = item.get("name") or item.get("tecnologia") or item.get("tech")
-            pct = int(item.get("percent") or item.get("percentual") or item.get("value") or 0)
-        else:
-            name, pct = str(item), 0
-        pct = max(0, min(100, pct))
-        bars.append(
-            f'<div class="bar-row"><strong>{_e(name)}</strong><div class="bar-track">'
-            f'<span style="width: {pct}%"></span></div><span class="muted">{pct}%</span></div>'
-        )
-    bars_html = "".join(bars) or '<p class="muted">Nenhuma tecnologia agregada ainda.</p>'
+    def bars_for(items, limit=15):
+        bars = []
+        for item in list(items or [])[:limit]:
+            if isinstance(item, Mapping):
+                name = item.get("name") or item.get("tecnologia") or item.get("tech")
+                pct = int(item.get("percent") or item.get("percentual") or item.get("value") or 0)
+                count = item.get("count")
+            else:
+                name, pct, count = str(item), 0, None
+            pct = max(0, min(100, pct))
+            count_html = f' <span class="muted">({count})</span>' if count is not None else ""
+            bars.append(
+                f'<div class="bar-row"><strong>{_e(name)}{count_html}</strong><div class="bar-track">'
+                f'<span style="width: {pct}%"></span></div><span class="muted">{pct}%</span></div>'
+            )
+        return "".join(bars) or '<p class="muted">Nenhum dado agregado ainda.</p>'
+
+    bars_html = bars_for(technologies, 15)
+    seniority_html = bars_for(data.get("seniority"), 4)
+    modes_html = bars_for(data.get("work_modes"), 4)
+    companies_html = bars_for(data.get("companies"), 8)
 
     body = f"""
     <section class="section grid grid-3">
@@ -824,6 +832,22 @@ def generate_market_trends_report(data: Mapping[str, Any], filename_base: str, o
       <article class="card">
         <h2 class="section-title">Gaps criticos</h2>
         {_tag_list(gaps, "warning", "Nenhum gap critico identificado.")}
+      </article>
+    </section>
+    <section class="section grid grid-2">
+      <article class="card">
+        <h2 class="section-title">Senioridade</h2>
+        {seniority_html}
+      </article>
+      <article class="card">
+        <h2 class="section-title">Modalidade</h2>
+        {modes_html}
+      </article>
+    </section>
+    <section class="section">
+      <article class="card">
+        <h2 class="section-title">Empresas mais frequentes</h2>
+        {companies_html}
       </article>
     </section>
     """

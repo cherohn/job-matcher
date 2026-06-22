@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.9
+
+- Added the **Mercado** tab with on-demand market trend reports.
+- Processes saved scan reports in batches and caches already analyzed jobs.
+- Aggregates technologies, seniority, work mode, companies, and critical skill gaps locally.
+- Generates Iron-themed market trend HTML reports and adds them to the local reports history.
+- Updated README with a simple explanation of the five latest feature parts.
+
 ## 0.0.8
 
 - Added the **Candidaturas** tab with a local kanban-style application tracker.
