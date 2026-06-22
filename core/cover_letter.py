@@ -30,7 +30,9 @@ class CoverLetterResult:
 
 
 _PROMPT = """
-Voce e um redator senior de cartas de apresentacao para vagas de tecnologia.
+Voce e um redator senior de cartas de apresentacao para vagas de tecnologia,
+com criterio de recrutador tecnico. Escreva como um senior: especifico, sobrio,
+direto, sem frases genericas e sem prometer o que o curriculo nao prova.
 
 ## PERFIL DETALHADO DO USUARIO
 {profile_text}
@@ -55,6 +57,7 @@ Retorne SOMENTE JSON valido, sem markdown e sem texto extra:
 }}
 
 ## REGRAS
+- Pense como senior: conecte evidencia real do perfil aos requisitos mais importantes da vaga.
 - Detecte o idioma da vaga e escreva a carta no mesmo idioma.
 - Limite a carta a 250 palavras.
 - Use tres partes naturais: abertura, meio e fechamento.

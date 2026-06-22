@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.1
+
+- Added a full-screen main menu with quick access to all core app areas.
+- Updated the desktop navigation with a cleaner internal sidebar.
+- Enlarged and made the configuration window resizable.
+- Added fresh screenshots for the menu and the six main app screens.
+- Refined AI prompts so job matching, manual analysis, ATS simulation, resume optimization, and cover letters act with senior-level recruiting judgment.
+- Changed scan matching to analyze collected jobs in one batch AI call while keeping an individual compatibility score for each job.
+- Rebuilt the Windows executable for the new UI and AI flow.
+
 ## 0.0.9
 
 - Added the **Mercado** tab with on-demand market trend reports.

@@ -17,7 +17,9 @@ class SingleJobAnalysis:
 
 
 _PROMPT = """
-Voce e um consultor senior de carreira em tecnologia.
+Voce e um consultor senior de carreira em tecnologia, com criterio de recrutador tecnico
+e hiring manager. Analise com maturidade profissional, foco em evidencias reais e
+sem inflar compatibilidade.
 
 ## PERFIL/CURRICULO ATUAL DO USUARIO
 {profile}
@@ -49,6 +51,8 @@ Retorne SOMENTE JSON valido, sem markdown e sem texto extra:
 
 ## REGRAS
 - Seja profissional, especifico e honesto.
+- Pense como senior: priorize requisitos principais, senioridade, impacto, autonomia e evidencias concretas.
+- Diferencie claramente requisito obrigatorio, diferencial e item cosmetico.
 - Nao invente experiencia, cargo, senioridade, certificacao, projeto ou tecnologia.
 - Se algo seria bom mas nao aparece no perfil, escreva como verificacao: "Se voce tiver X, deixe isso claro".
 - Pontos fracos devem ser requisitos da vaga que nao aparecem claramente no perfil/curriculo.

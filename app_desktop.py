@@ -31,22 +31,52 @@ from core.tracker import (
 from core.user_config import get_config_path, import_user_file, load_user_config, save_user_config
 
 
-BG = "#0F0F0F"
-BASE = "#181818"
-SURFACE = "#202020"
-SURFACE_2 = "#2A2A2A"
-BORDER = "#303030"
-ACCENT = "#C49A3C"
-ACCENT_DIM = "#8E6E2B"
-TEXT = "#DCDCDC"
-MUTED = "#6A6A6A"
-DANGER = "#9E3B3B"
-DANGER_DARK = "#3A1B1B"
+FONT = "Segoe UI"
+
+COLORS = {
+    "bg_deep": "#0F0F0F",
+    "bg_base": "#141414",
+    "bg_surface": "#1C1C1C",
+    "bg_elevated": "#252525",
+    "bg_hover": "#2C2C2C",
+    "amber": "#C49A3C",
+    "amber_dim": "#8B6B2A",
+    "amber_subtle": "#2A2318",
+    "text_primary": "#E8E8E8",
+    "text_secondary": "#999999",
+    "text_muted": "#555555",
+    "border": "#2A2A2A",
+    "border_bright": "#3A3A3A",
+    "green": "#27AE60",
+    "green_subtle": "#1A2E22",
+    "red": "#C0392B",
+    "red_subtle": "#2E1A1A",
+}
+C = COLORS
+
+BG = COLORS["bg_deep"]
+BASE = COLORS["bg_base"]
+SURFACE = COLORS["bg_surface"]
+SURFACE_2 = COLORS["bg_elevated"]
+BORDER = COLORS["border"]
+ACCENT = COLORS["amber"]
+ACCENT_DIM = COLORS["amber_dim"]
+TEXT = COLORS["text_primary"]
+MUTED = COLORS["text_secondary"]
+DANGER = COLORS["red"]
+DANGER_DARK = COLORS["red_subtle"]
 
 
 def resource_path(relative_path):
     base_path = getattr(sys, "_MEIPASS", os.path.abspath("."))
     return os.path.join(base_path, relative_path)
+
+
+def app_version():
+    try:
+        return Path(resource_path("VERSION")).read_text(encoding="utf-8").strip()
+    except Exception:
+        return "0.1.1"
 
 
 def friendly_log_message(level, message):
@@ -117,12 +147,12 @@ class QueueLogHandler(logging.Handler):
 class JobMatcherApp(ctk.CTk):
     def __init__(self):
         ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
+        ctk.set_default_color_theme("dark-blue")
 
         super().__init__(fg_color=BG)
         self.title("Job Matcher")
-        self.geometry("1170x770")
-        self.minsize(1030, 670)
+        self.geometry("1280x820")
+        self.minsize(1024, 720)
         self.after(0, self._maximize_window)
 
         self.messages = queue.Queue()
@@ -154,6 +184,7 @@ class JobMatcherApp(ctk.CTk):
         self.tracker_cards = {}
         self.report_rows = []
         self.nav_buttons = {}
+        self.nav_indicators = {}
         self.tab_frames = {}
         self.current_tab = "Busca"
 
@@ -239,63 +270,74 @@ class JobMatcherApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        self.sidebar = ctk.CTkFrame(self, width=205, corner_radius=0, fg_color=BG)
+        self.sidebar = ctk.CTkFrame(self, width=160, corner_radius=0, fg_color=BG, border_width=0)
         self.sidebar.grid(row=0, column=0, sticky="nsew")
-        self.sidebar.grid_rowconfigure(7, weight=1)
+        self.sidebar.grid_propagate(False)
+        self.sidebar.grid_rowconfigure(6, weight=1)
+        ctk.CTkFrame(self.sidebar, width=1, fg_color=C["border"], corner_radius=0).grid(row=0, column=1, rowspan=9, sticky="nse")
 
-        brand = ctk.CTkFrame(self.sidebar, fg_color="transparent")
-        brand.grid(row=0, column=0, padx=20, pady=(22, 26), sticky="ew")
-        logo = self._load_logo()
-        if logo:
-            ctk.CTkLabel(brand, image=logo, text="").pack(side="left", padx=(0, 12))
-            self._logo = logo
+        brand = ctk.CTkFrame(self.sidebar, fg_color="transparent", corner_radius=0)
+        brand.grid(row=0, column=0, padx=12, pady=(16, 12), sticky="ew")
+        icon = ctk.CTkFrame(brand, width=28, height=28, corner_radius=6, fg_color=COLORS["amber_subtle"], border_width=1, border_color=ACCENT_DIM)
+        icon.pack(side="left", padx=(0, 8))
+        icon.pack_propagate(False)
+        ctk.CTkLabel(icon, text="*", text_color=ACCENT, font=(FONT, 16, "bold")).place(relx=0.5, rely=0.5, anchor="center")
         title = ctk.CTkFrame(brand, fg_color="transparent")
         title.pack(side="left", fill="x", expand=True)
-        ctk.CTkLabel(title, text="Job Matcher", font=("Segoe UI", 18, "bold"), text_color=TEXT).pack(anchor="w")
-        ctk.CTkLabel(title, text="Monitoramento", font=("Segoe UI", 12), text_color=MUTED).pack(anchor="w", pady=(1, 0))
+        ctk.CTkLabel(title, text="Job Matcher", font=(FONT, 13, "bold"), text_color=TEXT).pack(anchor="w")
+        ctk.CTkLabel(title, text=f"v{app_version()}", font=(FONT, 10), text_color=COLORS["text_muted"]).pack(anchor="w")
 
-        self.status_card = self._sidebar_card("Status", self.status_text, accent=ACCENT)
-        self.status_card.grid(row=1, column=0, padx=16, pady=(0, 16), sticky="ew")
-        self._sidebar_card("Proxima busca", self.next_scan_text, accent=TEXT).grid(row=2, column=0, padx=16, pady=(0, 16), sticky="ew")
-        self._static_sidebar_card("Fonte", "Google/Serper", accent=ACCENT).grid(row=3, column=0, padx=16, pady=(0, 16), sticky="ew")
+        separator = ctk.CTkFrame(self.sidebar, fg_color=BORDER, height=1, corner_radius=0)
+        separator.grid(row=1, column=0, sticky="ew")
+
+        self.status_card = self._sidebar_card("STATUS", self.status_text, accent=COLORS["green"])
+        self.status_card.grid(row=2, column=0, padx=12, pady=(12, 8), sticky="ew")
+        self.next_card = self._sidebar_card("PROXIMA BUSCA", self.next_scan_text, accent=TEXT)
+        self.next_card.grid(row=3, column=0, padx=12, pady=(0, 8), sticky="ew")
+        self.context_card_var = tk.StringVar(value="Google / Serper")
+        self.context_card = self._sidebar_card("FONTE", self.context_card_var, accent=ACCENT)
+        self.context_card.grid(row=4, column=0, padx=12, pady=(0, 12), sticky="ew")
 
         ctk.CTkButton(
             self.sidebar,
             text="Configurar",
-            height=42,
-            corner_radius=8,
+            height=34,
+            corner_radius=6,
             fg_color=ACCENT,
             hover_color=ACCENT_DIM,
             text_color=BG,
             border_width=1,
             border_color=ACCENT,
+            font=(FONT, 12, "bold"),
             command=self.open_setup_window,
-        ).grid(row=4, column=0, padx=16, pady=(0, 16), sticky="ew")
+        ).grid(row=5, column=0, padx=12, pady=(0, 12), sticky="ew")
 
         ctk.CTkButton(
             self.sidebar,
             text="Abrir relatorios",
-            height=42,
-            corner_radius=8,
+            height=34,
+            corner_radius=6,
             fg_color=SURFACE,
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
             border_color=BORDER,
+            font=(FONT, 12),
             command=self.open_reports_folder,
-        ).grid(row=8, column=0, padx=16, pady=(0, 10), sticky="ew")
+        ).grid(row=7, column=0, padx=12, pady=(0, 6), sticky="ew")
         ctk.CTkButton(
             self.sidebar,
             text="Sair",
-            height=42,
-            corner_radius=8,
-            fg_color=DANGER_DARK,
-            hover_color=DANGER,
-            text_color=TEXT,
+            height=34,
+            corner_radius=6,
+            fg_color=SURFACE,
+            hover_color=DANGER_DARK,
+            text_color=DANGER,
             border_width=1,
-            border_color=DANGER,
+            border_color="#3A1A1A",
+            font=(FONT, 12),
             command=self._on_close,
-        ).grid(row=9, column=0, padx=16, pady=(0, 20), sticky="ew")
+        ).grid(row=8, column=0, padx=12, pady=(0, 14), sticky="ew")
 
         content = ctk.CTkFrame(self, fg_color=BG, corner_radius=0)
         content.grid(row=0, column=1, sticky="nsew", padx=0, pady=0)
@@ -303,12 +345,13 @@ class JobMatcherApp(ctk.CTk):
         content.grid_rowconfigure(0, weight=1)
 
         shell = ctk.CTkFrame(content, fg_color=BG, corner_radius=0)
-        shell.grid(row=0, column=0, sticky="nsew", padx=18, pady=18)
+        shell.grid(row=0, column=0, sticky="nsew")
         shell.grid_columnconfigure(0, weight=1)
         shell.grid_rowconfigure(1, weight=1)
 
-        nav = ctk.CTkFrame(shell, fg_color="transparent")
-        nav.grid(row=0, column=0, padx=26, pady=(0, 14), sticky="ew")
+        nav = ctk.CTkFrame(shell, fg_color=BG, height=42, corner_radius=0)
+        nav.grid(row=0, column=0, sticky="ew")
+        nav.grid_propagate(False)
         nav.grid_columnconfigure(6, weight=1)
         self._nav_button(nav, 0, "Busca")
         self._nav_button(nav, 1, "Analisar vaga")
@@ -316,18 +359,19 @@ class JobMatcherApp(ctk.CTk):
         self._nav_button(nav, 3, "Candidaturas")
         self._nav_button(nav, 4, "Mercado")
         self._nav_button(nav, 5, "Relatorios")
+        ctk.CTkFrame(shell, fg_color=BORDER, height=1, corner_radius=0).grid(row=0, column=0, sticky="sew")
 
-        tab_area = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0)
+        tab_area = ctk.CTkFrame(shell, fg_color=BASE, corner_radius=0)
         tab_area.grid(row=1, column=0, sticky="nsew")
         tab_area.grid_columnconfigure(0, weight=1)
         tab_area.grid_rowconfigure(0, weight=1)
 
-        search_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
-        analysis_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
-        optimization_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
-        tracker_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
-        trends_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
-        reports_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
+        search_tab = ctk.CTkFrame(tab_area, fg_color=BASE, corner_radius=0)
+        analysis_tab = ctk.CTkFrame(tab_area, fg_color=BASE, corner_radius=0)
+        optimization_tab = ctk.CTkFrame(tab_area, fg_color=BASE, corner_radius=0)
+        tracker_tab = ctk.CTkFrame(tab_area, fg_color=BASE, corner_radius=0)
+        trends_tab = ctk.CTkFrame(tab_area, fg_color=BASE, corner_radius=0)
+        reports_tab = ctk.CTkFrame(tab_area, fg_color=BASE, corner_radius=0)
         self.tab_frames = {
             "Busca": search_tab,
             "Analisar vaga": analysis_tab,
@@ -338,9 +382,9 @@ class JobMatcherApp(ctk.CTk):
         }
 
         main = search_tab
-        main.configure(fg_color=BG)
+        main.configure(fg_color=BASE)
         main.grid_columnconfigure(0, weight=1)
-        main.grid_rowconfigure(3, weight=1)
+        main.grid_rowconfigure(2, weight=1)
 
         header = ctk.CTkFrame(main, fg_color="transparent")
         header.grid(row=0, column=0, padx=26, pady=(26, 16), sticky="ew")
@@ -348,56 +392,57 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkLabel(
             header,
             text="Painel de busca",
-            font=("Segoe UI", 26, "bold"),
+            font=(FONT, 20, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             header,
             text="Configure a varredura, execute buscas pontuais e acompanhe os eventos importantes.",
-            font=("Segoe UI", 13),
-            text_color=MUTED,
+            font=(FONT, 12),
+            text_color=COLORS["text_muted"],
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
 
-        settings = ctk.CTkFrame(main, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        settings = ctk.CTkFrame(main, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         settings.grid(row=1, column=0, padx=26, pady=(0, 16), sticky="ew")
         settings.grid_columnconfigure((0, 1, 2), weight=1)
         settings.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(settings, text="Parametros da varredura", font=("Segoe UI", 15, "bold"), text_color=TEXT).grid(
-            row=0, column=0, columnspan=3, padx=14, pady=(14, 0), sticky="w"
+        ctk.CTkLabel(settings, text="PARAMETROS DA VARREDURA", font=(FONT, 10, "bold"), text_color=MUTED).grid(
+            row=0, column=0, columnspan=3, padx=18, pady=(14, 10), sticky="w"
         )
+        ctk.CTkFrame(settings, height=1, fg_color=BORDER, corner_radius=0).grid(row=1, column=0, columnspan=3, padx=18, sticky="ew")
         self._number_field(settings, 0, "Vagas por varredura", self.max_jobs)
         self._number_field(settings, 1, "Score minimo", self.min_score)
         self._number_field(settings, 2, "Intervalo (min)", self.interval)
 
-        actions = ctk.CTkFrame(main, fg_color="transparent")
-        actions.grid(row=2, column=0, padx=26, pady=(0, 16), sticky="ew")
+        actions = ctk.CTkFrame(settings, fg_color="transparent")
+        actions.grid(row=3, column=0, columnspan=3, padx=18, pady=(4, 18), sticky="ew")
         actions.grid_columnconfigure((0, 1, 2, 3), weight=1)
         self._action_button(actions, 0, "Iniciar monitoramento", self.start_monitoring, primary=True)
         self._action_button(actions, 1, "Buscar agora", self.run_once)
         self._action_button(actions, 2, "Parar", self.stop_monitoring, danger=True)
         self._action_button(actions, 3, "E-mail teste", self.send_test_email)
 
-        log_panel = ctk.CTkFrame(main, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
-        log_panel.grid(row=3, column=0, padx=26, pady=(0, 24), sticky="nsew")
+        log_panel = ctk.CTkFrame(main, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
+        log_panel.grid(row=2, column=0, padx=26, pady=(0, 24), sticky="nsew")
         log_panel.grid_columnconfigure(0, weight=1)
         log_panel.grid_rowconfigure(1, weight=1)
 
         log_header = ctk.CTkFrame(log_panel, fg_color="transparent")
         log_header.grid(row=0, column=0, padx=18, pady=(16, 8), sticky="ew")
         log_header.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(log_header, text="Atividade da busca", font=("Segoe UI", 17, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w")
-        ctk.CTkLabel(log_header, text="Eventos filtrados para mostrar apenas o que importa.", font=("Segoe UI", 12), text_color=MUTED).grid(row=1, column=0, sticky="w")
+        ctk.CTkLabel(log_header, text="ATIVIDADE DA BUSCA", font=(FONT, 10, "bold"), text_color=MUTED).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(log_header, text="Eventos filtrados para mostrar apenas o que importa.", font=(FONT, 12), text_color=COLORS["text_muted"]).grid(row=1, column=0, sticky="w")
         ctk.CTkButton(
             log_header,
             text="Limpar",
             width=92,
-            height=34,
-            corner_radius=8,
-            fg_color=SURFACE,
+            height=28,
+            corner_radius=6,
+            fg_color="transparent",
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
-            border_color=SURFACE_2,
+            border_color=COLORS["border_bright"],
             command=self._clear_log,
         ).grid(row=0, column=1, rowspan=2, sticky="e")
 
@@ -421,24 +466,31 @@ class JobMatcherApp(ctk.CTk):
         self._build_trends_tab(trends_tab)
         self._build_reports_tab(reports_tab)
         self._show_tab("Busca")
+        self._refresh_sidebar_status(self.status_text.get())
 
     def _nav_button(self, parent, column, name):
+        cell = ctk.CTkFrame(parent, fg_color="transparent", corner_radius=0)
+        cell.grid(row=0, column=column, padx=(20 if column == 0 else 0, 4), sticky="nsw")
+        cell.grid_rowconfigure(0, weight=1)
         button = ctk.CTkButton(
-            parent,
+            cell,
             text=name,
-            height=38,
-            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 126 if name == "Candidaturas" else 100 if name in {"Relatorios", "Mercado"} else 86,
-            corner_radius=8,
-            fg_color=SURFACE,
-            hover_color=SURFACE_2,
-            text_color=TEXT,
-            border_width=1,
-            border_color=BORDER,
-            font=("Segoe UI", 12, "bold"),
+            height=40,
+            width=150 if name == "Otimizar curriculo" else 122 if name == "Analisar vaga" else 118 if name == "Candidaturas" else 88 if name in {"Relatorios", "Mercado"} else 74,
+            corner_radius=0,
+            fg_color="transparent",
+            hover_color=SURFACE,
+            text_color=COLORS["text_muted"],
+            border_width=0,
+            font=(FONT, 12),
             command=lambda: self._show_tab(name),
         )
-        button.grid(row=0, column=column, padx=(0, 8), sticky="w")
+        button.grid(row=0, column=0, sticky="nsew")
+        indicator = ctk.CTkFrame(cell, height=2, fg_color=ACCENT, corner_radius=0)
+        indicator.grid(row=1, column=0, sticky="ew")
+        indicator.grid_remove()
         self.nav_buttons[name] = button
+        self.nav_indicators[name] = indicator
 
     def _show_tab(self, name):
         for frame in self.tab_frames.values():
@@ -455,21 +507,22 @@ class JobMatcherApp(ctk.CTk):
         for tab_name, button in self.nav_buttons.items():
             if tab_name == name:
                 button.configure(
-                    fg_color=ACCENT,
-                    hover_color=ACCENT_DIM,
-                    text_color=BG,
-                    border_color=ACCENT,
+                    fg_color="transparent",
+                    hover_color=SURFACE,
+                    text_color=ACCENT,
                 )
+                self.nav_indicators[tab_name].grid()
             else:
                 button.configure(
-                    fg_color=SURFACE,
-                    hover_color=SURFACE_2,
-                    text_color=TEXT,
-                    border_color=BORDER,
+                    fg_color="transparent",
+                    hover_color=SURFACE,
+                    text_color=COLORS["text_muted"],
                 )
+                self.nav_indicators[tab_name].grid_remove()
+        self._refresh_sidebar_context()
 
     def _build_analysis_tab(self, parent):
-        parent.configure(fg_color=BG)
+        parent.configure(fg_color=BASE)
         parent.grid_columnconfigure(0, weight=6)
         parent.grid_columnconfigure(1, weight=5)
         parent.grid_rowconfigure(1, weight=1)
@@ -480,7 +533,7 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkLabel(
             header,
             text="Analisar vaga",
-            font=("Segoe UI", 26, "bold"),
+            font=(FONT, 20, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
@@ -490,14 +543,14 @@ class JobMatcherApp(ctk.CTk):
             text_color=MUTED,
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
 
-        form = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        form = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         form.grid(row=1, column=0, padx=(26, 10), pady=(0, 24), sticky="nsew")
         form.grid_columnconfigure((0, 1), weight=1)
         form.grid_rowconfigure(3, weight=1)
 
         ctk.CTkLabel(
             form,
-            text="Dados da vaga",
+            text="DADOS DA VAGA",
             font=("Segoe UI", 17, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, columnspan=2, padx=18, pady=(18, 2), sticky="w")
@@ -515,12 +568,12 @@ class JobMatcherApp(ctk.CTk):
         desc_frame.grid(row=3, column=0, columnspan=2, padx=18, pady=(0, 14), sticky="nsew")
         desc_frame.grid_columnconfigure(0, weight=1)
         desc_frame.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(desc_frame, text="Descricao da vaga", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(desc_frame, text="Descricao da vaga", text_color=C["text_muted"], font=(FONT, 11)).grid(row=0, column=0, sticky="w")
         self.analysis_description = ctk.CTkTextbox(
             desc_frame,
-            height=260,
-            corner_radius=7,
-            fg_color=BG,
+            height=320,
+            corner_radius=6,
+            fg_color=SURFACE_2,
             border_width=1,
             border_color=BORDER,
             text_color=TEXT,
@@ -535,50 +588,54 @@ class JobMatcherApp(ctk.CTk):
         self.analyze_button = ctk.CTkButton(
             actions,
             text="Analisar compatibilidade",
-            height=38,
-            corner_radius=8,
+            height=36,
+            corner_radius=6,
             fg_color=ACCENT,
             hover_color=ACCENT_DIM,
             text_color=BG,
+            font=(FONT, 12, "bold"),
             command=self.analyze_single_job,
         )
         self.analyze_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
         self.ats_button = ctk.CTkButton(
             actions,
             text="Simular ATS",
-            height=38,
-            corner_radius=8,
-            fg_color=SURFACE,
-            hover_color=SURFACE_2,
-            text_color=TEXT,
+            height=36,
+            corner_radius=6,
+            fg_color="transparent",
+            hover_color=COLORS["amber_subtle"],
+            text_color=ACCENT,
             border_width=1,
-            border_color=SURFACE_2,
+            border_color=ACCENT_DIM,
+            font=(FONT, 12),
             command=self.simulate_ats,
         )
         self.ats_button.grid(row=0, column=1, sticky="ew", padx=(0, 8))
         self.cover_letter_button = ctk.CTkButton(
             actions,
             text="Gerar carta",
-            height=38,
-            corner_radius=8,
-            fg_color=SURFACE,
-            hover_color=SURFACE_2,
-            text_color=TEXT,
+            height=36,
+            corner_radius=6,
+            fg_color="transparent",
+            hover_color=COLORS["amber_subtle"],
+            text_color=ACCENT,
             border_width=1,
-            border_color=SURFACE_2,
+            border_color=ACCENT_DIM,
+            font=(FONT, 12),
             command=self.generate_cover_letter,
         )
         self.cover_letter_button.grid(row=0, column=2, sticky="ew", padx=(0, 8))
         self.register_application_button = ctk.CTkButton(
             actions,
             text="Registrar",
-            height=38,
-            corner_radius=8,
-            fg_color=SURFACE,
+            height=36,
+            corner_radius=6,
+            fg_color="transparent",
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
-            border_color=SURFACE_2,
+            border_color=COLORS["border_bright"],
+            font=(FONT, 12),
             state="disabled",
             command=self.register_last_application,
         )
@@ -586,25 +643,27 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkButton(
             actions,
             text="Copiar analise",
-            height=38,
-            corner_radius=8,
-            fg_color=SURFACE,
+            height=36,
+            corner_radius=6,
+            fg_color="transparent",
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
-            border_color=SURFACE_2,
+            border_color=COLORS["border_bright"],
+            font=(FONT, 12),
             command=self.copy_analysis,
         ).grid(row=0, column=4, sticky="ew", padx=(0, 8))
         self.analysis_optimize_button = ctk.CTkButton(
             actions,
             text="Otimizar esta vaga",
-            height=38,
-            corner_radius=8,
-            fg_color=SURFACE,
+            height=36,
+            corner_radius=6,
+            fg_color="transparent",
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
-            border_color=SURFACE_2,
+            border_color=COLORS["border_bright"],
+            font=(FONT, 12),
             state="disabled",
             command=self.use_last_analyzed_job,
         )
@@ -622,7 +681,7 @@ class JobMatcherApp(ctk.CTk):
             command=self.clear_analysis,
         ).grid(row=0, column=6, sticky="ew")
 
-        result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        result_panel = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
         result_panel.grid_columnconfigure(0, weight=1)
         result_panel.grid_rowconfigure(1, weight=1)
@@ -631,9 +690,9 @@ class JobMatcherApp(ctk.CTk):
         result_header.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             result_header,
-            text="Resultado",
-            font=("Segoe UI", 17, "bold"),
-            text_color=TEXT,
+            text="RESULTADO",
+            font=(FONT, 10, "bold"),
+            text_color=MUTED,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             result_header,
@@ -661,7 +720,7 @@ class JobMatcherApp(ctk.CTk):
         self.analysis_result_box.configure(state="disabled")
 
     def _build_optimization_tab(self, parent):
-        parent.configure(fg_color=BG)
+        parent.configure(fg_color=BASE)
         parent.grid_columnconfigure(0, weight=3, minsize=520)
         parent.grid_columnconfigure(1, weight=2, minsize=320)
         parent.grid_rowconfigure(1, weight=1)
@@ -673,13 +732,13 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkLabel(
             header,
             text="Otimizar curriculo",
-            font=("Segoe UI", 26, "bold"),
+            font=(FONT, 20, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             header,
             textvariable=self.optimization_status,
-            font=("Segoe UI", 13),
+            font=(FONT, 12),
             text_color=MUTED,
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
         ctk.CTkButton(
@@ -692,12 +751,12 @@ class JobMatcherApp(ctk.CTk):
             hover_color=SURFACE_2,
             text_color=TEXT,
             border_width=1,
-            border_color=BORDER,
+            border_color=C["border_bright"],
             font=("Segoe UI", 12, "bold"),
             command=self.use_last_analyzed_job,
         ).grid(row=0, column=1, rowspan=2, padx=(20, 0), sticky="e")
 
-        form = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        form = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         form.grid(row=1, column=0, padx=(26, 10), pady=(0, 24), sticky="nsew")
         form.grid_columnconfigure((0, 1), weight=1)
         form.grid_rowconfigure(2, weight=1, minsize=170)
@@ -707,15 +766,15 @@ class JobMatcherApp(ctk.CTk):
         form_header.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             form_header,
-            text="Vaga alvo",
-            font=("Segoe UI", 18, "bold"),
-            text_color=TEXT,
+            text="VAGA ALVO",
+            font=(FONT, 10, "bold"),
+            text_color=MUTED,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             form_header,
             text="Use a ultima vaga analisada ou cole uma descricao nova para direcionar o curriculo.",
-            font=("Segoe UI", 12),
-            text_color=MUTED,
+            font=(FONT, 12),
+            text_color=COLORS["text_muted"],
             justify="left",
         ).grid(row=1, column=0, columnspan=2, pady=(5, 0), sticky="w")
 
@@ -726,16 +785,16 @@ class JobMatcherApp(ctk.CTk):
         desc_frame.grid(row=2, column=0, columnspan=2, padx=18, pady=(0, 14), sticky="nsew")
         desc_frame.grid_columnconfigure(0, weight=1)
         desc_frame.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(desc_frame, text="Descricao da vaga", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(desc_frame, text="Descricao da vaga", text_color=COLORS["text_muted"], font=(FONT, 11)).grid(row=0, column=0, sticky="w")
         self.optimization_description = ctk.CTkTextbox(
             desc_frame,
             height=260,
-            corner_radius=7,
-            fg_color=BG,
+            corner_radius=6,
+            fg_color=SURFACE_2,
             border_width=1,
-            border_color=BORDER,
-            text_color=TEXT,
-            font=("Segoe UI", 12),
+            border_color=COLORS["border_bright"],
+            text_color=MUTED,
+            font=("Consolas", 11),
             wrap="word",
         )
         self.optimization_description.grid(row=1, column=0, sticky="nsew", pady=(6, 0))
@@ -769,17 +828,18 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkButton(
             actions,
             text="Limpar",
-            height=38,
-            corner_radius=8,
-            fg_color=SURFACE,
+            height=36,
+            corner_radius=6,
+            fg_color="transparent",
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
-            border_color=SURFACE_2,
+            border_color=COLORS["border_bright"],
+            font=(FONT, 12),
             command=self.clear_optimization,
         ).grid(row=0, column=2, sticky="ew")
 
-        result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        result_panel = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
         result_panel.grid_columnconfigure(0, weight=1)
         result_panel.grid_rowconfigure(1, weight=1)
@@ -788,14 +848,14 @@ class JobMatcherApp(ctk.CTk):
         result_header.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             result_header,
-            text="Curriculo direcionado",
-            font=("Segoe UI", 17, "bold"),
+            text="CURRICULO DIRECIONADO",
+            font=(FONT, 10, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             result_header,
             text="Sugestoes editaveis, baseadas no que ja existe no perfil.",
-            font=("Segoe UI", 12),
+            font=(FONT, 12),
             text_color=MUTED,
         ).grid(row=1, column=0, sticky="w")
 
@@ -805,8 +865,8 @@ class JobMatcherApp(ctk.CTk):
             fg_color=BG,
             border_width=1,
             border_color=BORDER,
-            text_color=TEXT,
-            font=("Segoe UI", 12),
+            text_color=MUTED,
+            font=(FONT, 12),
             wrap="word",
         )
         self.optimization_result_box.grid(row=1, column=0, padx=18, pady=(0, 18), sticky="nsew")
@@ -818,7 +878,7 @@ class JobMatcherApp(ctk.CTk):
         self.optimization_result_box.configure(state="disabled")
 
     def _build_tracker_tab(self, parent):
-        parent.configure(fg_color=BG)
+        parent.configure(fg_color=BASE)
         parent.grid_columnconfigure(0, weight=1)
         parent.grid_columnconfigure(1, weight=0, minsize=320)
         parent.grid_rowconfigure(2, weight=1)
@@ -829,26 +889,27 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkLabel(
             header,
             text="Candidaturas",
-            font=("Segoe UI", 26, "bold"),
+            font=(FONT, 20, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             header,
             text="Acompanhe o funil, mova vagas entre etapas e registre proximas acoes.",
-            font=("Segoe UI", 13),
-            text_color=MUTED,
+            font=(FONT, 12),
+            text_color=C["text_muted"],
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
         ctk.CTkButton(
             header,
             text="Atualizar",
             width=110,
             height=36,
-            corner_radius=8,
-            fg_color=SURFACE,
+            corner_radius=6,
+            fg_color="transparent",
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
-            border_color=BORDER,
+            border_color=C["border_bright"],
+            font=(FONT, 12),
             command=self.refresh_tracker,
         ).grid(row=0, column=1, rowspan=2, sticky="e")
 
@@ -865,32 +926,34 @@ class JobMatcherApp(ctk.CTk):
             ctk.CTkLabel(
                 self.tracker_board,
                 text=STATUS_LABELS[status],
-                font=("Segoe UI", 14, "bold"),
-                text_color=TEXT,
+                font=(FONT, 10, "bold"),
+                text_color=C["text_muted"],
             ).grid(row=0, column=index, sticky="w", padx=(0 if index == 0 else 8, 0), pady=(0, 8))
             column = ctk.CTkScrollableFrame(
                 self.tracker_board,
-                fg_color=BASE,
+                fg_color=SURFACE,
                 corner_radius=8,
                 border_width=1,
                 border_color=BORDER,
+                scrollbar_button_color=C["border"],
+                scrollbar_button_hover_color=C["border_bright"],
             )
             column.grid(row=1, column=index, sticky="nsew", padx=(0 if index == 0 else 8, 0))
             self.tracker_columns[status] = column
 
-        self.tracker_detail = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        self.tracker_detail = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         self.tracker_detail.grid(row=2, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
         self.tracker_detail.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(
             self.tracker_detail,
             text="Detalhes",
-            font=("Segoe UI", 17, "bold"),
-            text_color=TEXT,
+            font=(FONT, 10, "bold"),
+            text_color=MUTED,
         ).grid(row=0, column=0, padx=18, pady=(18, 4), sticky="w")
         self.tracker_detail_title = ctk.CTkLabel(
             self.tracker_detail,
             text="Selecione uma candidatura.",
-            font=("Segoe UI", 12),
+            font=(FONT, 13),
             text_color=MUTED,
             wraplength=280,
             justify="left",
@@ -901,16 +964,16 @@ class JobMatcherApp(ctk.CTk):
         self.tracker_next_action = tk.StringVar()
         self._tracker_entry("Contato", self.tracker_contact, 2)
         self._tracker_entry("Proxima acao", self.tracker_next_action, 3)
-        ctk.CTkLabel(self.tracker_detail, text="Notas", text_color=MUTED, font=("Segoe UI", 12)).grid(row=4, column=0, padx=18, sticky="w")
+        ctk.CTkLabel(self.tracker_detail, text="Notas", text_color=C["text_muted"], font=(FONT, 11)).grid(row=4, column=0, padx=18, sticky="w")
         self.tracker_notes = ctk.CTkTextbox(
             self.tracker_detail,
             height=120,
-            corner_radius=7,
-            fg_color=BG,
+            corner_radius=6,
+            fg_color=SURFACE_2,
             border_width=1,
-            border_color=BORDER,
+            border_color=C["border_bright"],
             text_color=TEXT,
-            font=("Segoe UI", 12),
+            font=(FONT, 12),
             wrap="word",
         )
         self.tracker_notes.grid(row=5, column=0, padx=18, pady=(6, 12), sticky="ew")
@@ -919,10 +982,11 @@ class JobMatcherApp(ctk.CTk):
             self.tracker_detail,
             text="Salvar detalhes",
             height=36,
-            corner_radius=8,
+            corner_radius=6,
             fg_color=ACCENT,
             hover_color=ACCENT_DIM,
             text_color=BG,
+            font=(FONT, 12, "bold"),
             command=self.save_tracker_details,
         ).grid(row=6, column=0, padx=18, pady=(0, 12), sticky="ew")
 
@@ -935,20 +999,21 @@ class JobMatcherApp(ctk.CTk):
         frame = ctk.CTkFrame(self.tracker_detail, fg_color="transparent")
         frame.grid(row=row, column=0, padx=18, pady=(0, 10), sticky="ew")
         frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(frame, text=label, text_color=C["text_muted"], font=(FONT, 11)).grid(row=0, column=0, sticky="w")
         ctk.CTkEntry(
             frame,
             textvariable=variable,
-            height=34,
-            corner_radius=7,
-            fg_color=BG,
-            border_color=BORDER,
+            height=36,
+            corner_radius=6,
+            fg_color=SURFACE_2,
+            border_width=1,
+            border_color=C["border_bright"],
             text_color=TEXT,
-            font=("Segoe UI", 12),
+            font=(FONT, 13),
         ).grid(row=1, column=0, sticky="ew", pady=(6, 0))
 
     def _build_trends_tab(self, parent):
-        parent.configure(fg_color=BG)
+        parent.configure(fg_color=BASE)
         parent.grid_columnconfigure(0, weight=1)
         parent.grid_rowconfigure(2, weight=1)
 
@@ -958,46 +1023,57 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkLabel(
             header,
             text="Mercado",
-            font=("Segoe UI", 26, "bold"),
+            font=(FONT, 20, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             header,
             textvariable=self.market_status,
-            font=("Segoe UI", 13),
-            text_color=MUTED,
+            font=(FONT, 12),
+            text_color=C["text_muted"],
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
-
-        summary = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
-        summary.grid(row=1, column=0, padx=26, pady=(0, 16), sticky="ew")
-        summary.grid_columnconfigure(0, weight=1)
-        self.market_new_jobs = tk.StringVar(value="Vagas novas para tendencias: -")
-        ctk.CTkLabel(summary, textvariable=self.market_new_jobs, text_color=TEXT, font=("Segoe UI", 17, "bold")).grid(
-            row=0, column=0, padx=18, pady=(16, 2), sticky="w"
-        )
-        ctk.CTkLabel(
-            summary,
-            text="O relatorio usa os scans salvos, processa vagas novas em lotes de 10 e abre um HTML no navegador.",
-            text_color=MUTED,
-            font=("Segoe UI", 12),
-        ).grid(row=1, column=0, padx=18, pady=(0, 16), sticky="w")
         self.market_button = ctk.CTkButton(
-            summary,
+            header,
             text="Gerar relatorio de mercado",
-            height=38,
-            corner_radius=8,
+            height=36,
+            corner_radius=6,
             fg_color=ACCENT,
             hover_color=ACCENT_DIM,
             text_color=BG,
+            font=(FONT, 12, "bold"),
             command=self.generate_market_trends,
         )
-        self.market_button.grid(row=0, column=1, rowspan=2, padx=18, pady=16, sticky="e")
+        self.market_button.grid(row=0, column=1, rowspan=2, sticky="e")
 
-        log_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        market_wrap = ctk.CTkFrame(parent, fg_color="transparent")
+        market_wrap.grid(row=1, column=0, padx=26, pady=(0, 16), sticky="ew")
+        market_wrap.grid_columnconfigure(1, weight=1)
+        ctk.CTkFrame(market_wrap, width=2, fg_color=ACCENT, corner_radius=0).grid(row=0, column=0, sticky="ns")
+
+        summary = ctk.CTkFrame(market_wrap, fg_color=SURFACE, corner_radius=8, border_width=1, border_color=BORDER)
+        summary.grid(row=0, column=1, sticky="ew")
+        summary.grid_columnconfigure(0, weight=1)
+        self.market_new_jobs = tk.StringVar(value="Vagas novas para tendencias: -")
+        ctk.CTkLabel(summary, text="TOTAL DE VAGAS COLETADAS", text_color=C["text_muted"], font=(FONT, 11)).grid(
+            row=0, column=0, padx=16, pady=(14, 2), sticky="w"
+        )
+        self.market_total_label = ctk.CTkLabel(summary, text="Historico local", text_color=TEXT, font=(FONT, 20, "bold"))
+        self.market_total_label.grid(row=1, column=0, padx=16, pady=(0, 14), sticky="w")
+        self.market_badge = ctk.CTkLabel(
+            summary,
+            text="- novas",
+            fg_color=C["amber_subtle"],
+            text_color=ACCENT,
+            corner_radius=4,
+            font=(FONT, 10, "bold"),
+        )
+        self.market_badge.grid(row=0, column=1, rowspan=2, padx=16, pady=14, sticky="e")
+
+        log_panel = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         log_panel.grid(row=2, column=0, padx=26, pady=(0, 24), sticky="nsew")
         log_panel.grid_columnconfigure(0, weight=1)
         log_panel.grid_rowconfigure(1, weight=1)
-        ctk.CTkLabel(log_panel, text="Progresso", text_color=TEXT, font=("Segoe UI", 17, "bold")).grid(
+        ctk.CTkLabel(log_panel, text="PROGRESSO", text_color=MUTED, font=(FONT, 10, "bold")).grid(
             row=0, column=0, padx=18, pady=(18, 8), sticky="w"
         )
         self.market_log = ctk.CTkTextbox(
@@ -1006,8 +1082,8 @@ class JobMatcherApp(ctk.CTk):
             fg_color=BG,
             border_width=1,
             border_color=BORDER,
-            text_color=TEXT,
-            font=("Segoe UI", 12),
+            text_color=MUTED,
+            font=("Consolas", 11),
             wrap="word",
         )
         self.market_log.grid(row=1, column=0, padx=18, pady=(0, 18), sticky="nsew")
@@ -1016,7 +1092,7 @@ class JobMatcherApp(ctk.CTk):
         self.refresh_trends_tab()
 
     def _build_reports_tab(self, parent):
-        parent.configure(fg_color=BG)
+        parent.configure(fg_color=BASE)
         parent.grid_columnconfigure(0, weight=1)
         parent.grid_rowconfigure(1, weight=1)
 
@@ -1026,60 +1102,69 @@ class JobMatcherApp(ctk.CTk):
         ctk.CTkLabel(
             header,
             text="Relatorios",
-            font=("Segoe UI", 26, "bold"),
+            font=(FONT, 20, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             header,
             text="Historico local das varreduras, analises manuais e otimizacoes de curriculo.",
-            font=("Segoe UI", 13),
-            text_color=MUTED,
+            font=(FONT, 12),
+            text_color=C["text_muted"],
         ).grid(row=1, column=0, pady=(6, 0), sticky="w")
         ctk.CTkButton(
             header,
             text="Atualizar",
             width=110,
-            height=36,
-            corner_radius=8,
-            fg_color=SURFACE,
+            height=34,
+            corner_radius=6,
+            fg_color="transparent",
             hover_color=SURFACE_2,
-            text_color=TEXT,
+            text_color=MUTED,
             border_width=1,
-            border_color=BORDER,
+            border_color=C["border_bright"],
+            font=(FONT, 12),
             command=self.refresh_reports,
         ).grid(row=0, column=1, rowspan=2, sticky="e")
 
-        panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        panel = ctk.CTkFrame(parent, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
         panel.grid(row=1, column=0, padx=26, pady=(0, 24), sticky="nsew")
         panel.grid_columnconfigure(0, weight=1)
         panel.grid_rowconfigure(0, weight=1)
 
-        self.reports_list = ctk.CTkScrollableFrame(panel, fg_color="transparent")
+        self.reports_list = ctk.CTkScrollableFrame(
+            panel,
+            fg_color="transparent",
+            scrollbar_button_color=C["border"],
+            scrollbar_button_hover_color=C["border_bright"],
+        )
         self.reports_list.grid(row=0, column=0, padx=18, pady=18, sticky="nsew")
         self.reports_list.grid_columnconfigure(0, weight=1)
 
     def _text_field(self, parent, row, column, label, variable):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.grid(row=row, column=column, padx=14, pady=14, sticky="ew")
+        frame.grid(row=row, column=column, padx=14, pady=(10, 14), sticky="ew")
         frame.grid_columnconfigure(0, weight=1)
-        ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(frame, text=label, text_color=COLORS["text_muted"], font=(FONT, 11)).grid(row=0, column=0, sticky="w")
         ctk.CTkEntry(
             frame,
             textvariable=variable,
             height=36,
-            corner_radius=7,
-            fg_color=BG,
-            border_color=BORDER,
+            corner_radius=6,
+            fg_color=SURFACE_2,
+            border_width=1,
+            border_color=COLORS["border_bright"],
             text_color=TEXT,
-            font=("Segoe UI", 13),
+            placeholder_text_color=COLORS["text_muted"],
+            font=(FONT, 13),
         ).grid(row=1, column=0, sticky="ew", pady=(6, 0))
 
     def open_setup_window(self):
         data = load_user_config()
         window = ctk.CTkToplevel(self)
         window.title("Configurar Job Matcher")
-        window.geometry("1090x810")
-        window.minsize(990, 710)
+        window.configure(fg_color=BASE)
+        window.geometry("720x600")
+        window.minsize(720, 600)
         window.transient(self)
         window.grab_set()
         self._set_setup_window_style(window)
@@ -1089,26 +1174,26 @@ class JobMatcherApp(ctk.CTk):
         window.grid_rowconfigure(1, weight=1)
 
         header = ctk.CTkFrame(window, fg_color=BG, corner_radius=0)
-        header.grid(row=0, column=0, sticky="ew", padx=22, pady=(18, 10))
+        header.grid(row=0, column=0, sticky="ew")
         header.grid_columnconfigure(0, weight=1)
 
         title_block = ctk.CTkFrame(header, fg_color="transparent")
-        title_block.grid(row=0, column=0, sticky="w")
+        title_block.grid(row=0, column=0, padx=18, pady=14, sticky="w")
         ctk.CTkLabel(
             title_block,
             text="Configuracao do usuario",
-            font=("Segoe UI", 24, "bold"),
+            font=(FONT, 15, "bold"),
             text_color=TEXT,
         ).grid(row=0, column=0, sticky="w")
         ctk.CTkLabel(
             title_block,
             text=f"Arquivo local: {get_config_path()}",
-            font=("Segoe UI", 11),
-            text_color=MUTED,
+            font=(FONT, 10),
+            text_color=COLORS["text_muted"],
         ).grid(row=1, column=0, sticky="w", pady=(3, 0))
 
-        body = ctk.CTkScrollableFrame(window, fg_color=BG)
-        body.grid(row=1, column=0, sticky="nsew", padx=22, pady=(0, 18))
+        body = ctk.CTkScrollableFrame(window, fg_color=BASE, scrollbar_button_color=COLORS["border_bright"], scrollbar_fg_color=BORDER)
+        body.grid(row=1, column=0, sticky="nsew", padx=18, pady=18)
         body.grid_columnconfigure(0, weight=1)
 
         ctk.CTkLabel(body, text="Configuração do usuário", font=("Segoe UI", 22, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w")
@@ -1349,7 +1434,7 @@ class JobMatcherApp(ctk.CTk):
             window.destroy()
 
         actions = ctk.CTkFrame(header, fg_color="transparent")
-        actions.grid(row=0, column=1, sticky="e")
+        actions.grid(row=0, column=1, padx=18, pady=14, sticky="e")
         ctk.CTkButton(
             actions,
             text="Salvar configuracao",
@@ -1378,52 +1463,420 @@ class JobMatcherApp(ctk.CTk):
         window.bind("<Control-s>", lambda _event: save_setup())
         window.bind("<Escape>", lambda _event: window.destroy())
 
-    def _sidebar_card(self, title, value_var, accent):
-        frame = ctk.CTkFrame(self.sidebar, fg_color=SURFACE, corner_radius=10, border_width=1, border_color=BORDER)
-        ctk.CTkLabel(frame, text=title, text_color=MUTED, font=("Segoe UI", 12)).pack(anchor="w", padx=14, pady=(12, 2))
-        ctk.CTkLabel(frame, textvariable=value_var, text_color=accent, font=("Segoe UI", 15, "bold")).pack(anchor="w", padx=14, pady=(0, 12))
+    def open_setup_window(self):
+        data = load_user_config()
+        window = ctk.CTkToplevel(self)
+        window.title("Configurar Job Matcher")
+        window.geometry("1120x760")
+        window.minsize(980, 700)
+        window.resizable(True, True)
+        window.configure(fg_color=BASE)
+        window.transient(self)
+        window.grab_set()
+        self._set_setup_window_style(window)
+        window.after(100, lambda: self._set_setup_window_style(window))
+
+        fields = {}
+        path_vars = {
+            "profile_text_path": tk.StringVar(value=str(data.get("profile_text_path", ""))),
+            "resume_pdf_path": tk.StringVar(value=str(data.get("resume_pdf_path", ""))),
+        }
+        multiline_boxes = {}
+        test_status = tk.StringVar(value="Teste cada servico quando quiser validar a configuracao.")
+
+        header = ctk.CTkFrame(window, fg_color=BG, height=72, corner_radius=0)
+        header.pack(fill="x")
+        header.pack_propagate(False)
+        ctk.CTkFrame(header, height=1, fg_color=BORDER, corner_radius=0).pack(side="bottom", fill="x")
+
+        title_block = ctk.CTkFrame(header, fg_color="transparent")
+        title_block.pack(side="left", padx=24, pady=16)
+        ctk.CTkLabel(title_block, text="Configuracao do usuario", font=(FONT, 16, "bold"), text_color=TEXT).pack(anchor="w")
+        ctk.CTkLabel(title_block, text=str(get_config_path()), font=(FONT, 10), text_color=C["text_muted"]).pack(anchor="w", pady=(2, 0))
+
+        body = ctk.CTkFrame(window, fg_color="transparent")
+        body.pack(fill="both", expand=True)
+        body.grid_columnconfigure(1, weight=1)
+        body.grid_rowconfigure(0, weight=1)
+
+        nav = ctk.CTkFrame(body, width=150, fg_color=BG, corner_radius=0)
+        nav.grid(row=0, column=0, sticky="nsew")
+        nav.grid_propagate(False)
+        ctk.CTkFrame(nav, width=1, fg_color=BORDER, corner_radius=0).pack(side="right", fill="y")
+
+        content_area = ctk.CTkScrollableFrame(
+            body,
+            fg_color=BASE,
+            corner_radius=0,
+            scrollbar_button_color=C["border"],
+            scrollbar_button_hover_color=C["border_bright"],
+        )
+        content_area.grid(row=0, column=1, sticky="nsew")
+
+        section_frames = {}
+        nav_buttons = {}
+
+        def section_group(parent, title):
+            row = ctk.CTkFrame(parent, fg_color="transparent")
+            row.pack(fill="x", pady=(16, 10))
+            ctk.CTkLabel(row, text=title.upper(), font=(FONT, 10, "bold"), text_color=C["text_muted"]).pack(side="left")
+            ctk.CTkFrame(row, height=1, fg_color=BORDER, corner_radius=0).pack(side="left", fill="x", expand=True, padx=(8, 0), pady=6)
+
+        def add_entry(parent, key, label, secret=False, mono=False, default=""):
+            ctk.CTkLabel(parent, text=label, font=(FONT, 11), text_color=C["text_muted"]).pack(anchor="w", pady=(8, 4))
+            var = tk.StringVar(value=str(data.get(key, default)))
+            fields[key] = var
+            entry = ctk.CTkEntry(
+                parent,
+                textvariable=var,
+                show="*" if secret else "",
+                height=36,
+                corner_radius=6,
+                fg_color=SURFACE_2,
+                border_width=1,
+                border_color=C["border_bright"],
+                text_color=C["text_muted"] if mono else TEXT,
+                font=("Consolas", 12) if mono else (FONT, 13),
+            )
+            entry.pack(fill="x")
+            return entry
+
+        def add_list_box(parent, key, label, default_attr, height=90, help_text=None):
+            ctk.CTkLabel(parent, text=label, font=(FONT, 11), text_color=C["text_muted"]).pack(anchor="w", pady=(10, 4))
+            if help_text:
+                ctk.CTkLabel(parent, text=help_text, font=(FONT, 11), text_color=C["text_muted"]).pack(anchor="w", pady=(0, 4))
+            box = ctk.CTkTextbox(
+                parent,
+                height=height,
+                corner_radius=6,
+                fg_color=SURFACE_2,
+                border_width=1,
+                border_color=C["border_bright"],
+                text_color=TEXT,
+                font=(FONT, 12),
+            )
+            box.pack(fill="x")
+            values = data.get(key) or getattr(engine.settings, default_attr, [])
+            box.insert("1.0", "\n".join(values))
+            multiline_boxes[key] = box
+            return box
+
+        def add_file_picker(parent, key, label, filetypes, target_name):
+            ctk.CTkLabel(parent, text=label, font=(FONT, 11), text_color=C["text_muted"]).pack(anchor="w", pady=(10, 4))
+            row = ctk.CTkFrame(parent, fg_color="transparent")
+            row.pack(fill="x")
+            row.grid_columnconfigure(0, weight=1)
+            ctk.CTkEntry(
+                row,
+                textvariable=path_vars[key],
+                height=36,
+                corner_radius=6,
+                fg_color=SURFACE_2,
+                border_width=1,
+                border_color=C["border_bright"],
+                text_color=C["text_muted"],
+                font=(FONT, 11),
+            ).grid(row=0, column=0, sticky="ew", padx=(0, 8))
+
+            def choose_file():
+                selected = filedialog.askopenfilename(parent=window, filetypes=filetypes)
+                if selected:
+                    try:
+                        path_vars[key].set(import_user_file(selected, target_name))
+                    except Exception as exc:
+                        messagebox.showerror("Job Matcher", f"Nao foi possivel importar o arquivo:\n{exc}")
+
+            ctk.CTkButton(
+                row,
+                text="Selecionar",
+                width=100,
+                height=36,
+                corner_radius=6,
+                fg_color="transparent",
+                hover_color=SURFACE_2,
+                text_color=MUTED,
+                border_width=1,
+                border_color=C["border_bright"],
+                font=(FONT, 12),
+                command=choose_file,
+            ).grid(row=0, column=1)
+
+        def show_section(name):
+            for section, frame in section_frames.items():
+                if section == name:
+                    frame.pack(fill="both", expand=True, padx=24, pady=20)
+                else:
+                    frame.pack_forget()
+            for section, button in nav_buttons.items():
+                if section == name:
+                    button.configure(fg_color=C["amber_subtle"], text_color=ACCENT)
+                else:
+                    button.configure(fg_color="transparent", text_color=C["text_muted"])
+
+        for name in ("Credenciais", "Busca", "Perfil e curriculo", "Termos e filtros"):
+            button = ctk.CTkButton(
+                nav,
+                text=name,
+                height=36,
+                corner_radius=6,
+                fg_color="transparent",
+                hover_color=SURFACE,
+                text_color=C["text_muted"],
+                border_width=0,
+                anchor="w",
+                font=(FONT, 12),
+                command=lambda selected=name: show_section(selected),
+            )
+            button.pack(fill="x", padx=8, pady=(8 if not nav_buttons else 2, 0))
+            nav_buttons[name] = button
+
+        cred = ctk.CTkFrame(content_area, fg_color="transparent")
+        section_frames["Credenciais"] = cred
+        section_group(cred, "IA - Groq")
+        add_entry(cred, "groq_api_key", "API Key do Groq", secret=True, mono=True)
+        add_entry(cred, "groq_model", "Modelo da IA", default="llama-3.3-70b-versatile")
+        if not fields["groq_model"].get():
+            fields["groq_model"].set("llama-3.3-70b-versatile")
+        section_group(cred, "Busca - Serper")
+        add_entry(cred, "serper_api_key", "API Key do Serper", secret=True, mono=True)
+        section_group(cred, "Gmail")
+        add_entry(cred, "email_remetente", "Remetente")
+        add_entry(cred, "email_senha_app", "Senha de app do Gmail", secret=True, mono=True)
+        add_entry(cred, "email_destinatario", "E-mail que recebera os matches")
+
+        def run_config_test(kind):
+            def worker():
+                try:
+                    if kind == "ia":
+                        key = fields["groq_api_key"].get().strip()
+                        model = fields["groq_model"].get().strip() or "llama-3.3-70b-versatile"
+                        if not key:
+                            raise ValueError("Informe a API da IA antes de testar.")
+                        from groq import Groq
+                        client = Groq(api_key=key)
+                        client.chat.completions.create(
+                            model=model,
+                            messages=[{"role": "user", "content": "Responda apenas OK."}],
+                            temperature=0,
+                            max_tokens=8,
+                        )
+                        message = "IA funcionando."
+                    elif kind == "serper":
+                        key = fields["serper_api_key"].get().strip()
+                        if not key:
+                            raise ValueError("Informe a API Serper antes de testar.")
+                        response = requests.post(
+                            "https://google.serper.dev/search",
+                            headers={"X-API-KEY": key, "Content-Type": "application/json"},
+                            json={"q": "site:linkedin.com/jobs Java developer", "num": 1},
+                            timeout=20,
+                        )
+                        if response.status_code >= 400:
+                            raise ValueError(f"Serper retornou HTTP {response.status_code}.")
+                        message = "Serper funcionando."
+                    else:
+                        sender = fields["email_remetente"].get().strip()
+                        password = fields["email_senha_app"].get().strip()
+                        if not sender or not password:
+                            raise ValueError("Informe Gmail remetente e senha de app antes de testar.")
+                        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20) as smtp:
+                            smtp.login(sender, password)
+                        message = "Gmail funcionando."
+                    self.after(0, test_status.set, message)
+                    self.after(0, messagebox.showinfo, "Job Matcher", message)
+                except Exception as exc:
+                    error = f"Teste falhou: {exc}"
+                    self.after(0, test_status.set, error)
+                    self.after(0, messagebox.showerror, "Job Matcher", error)
+
+            test_status.set("Testando, aguarde...")
+            threading.Thread(target=worker, daemon=True).start()
+
+        section_group(cred, "Testes rapidos")
+        ctk.CTkLabel(cred, textvariable=test_status, font=(FONT, 11), text_color=C["text_muted"]).pack(anchor="w", pady=(0, 8))
+        test_row = ctk.CTkFrame(cred, fg_color="transparent")
+        test_row.pack(fill="x")
+        test_row.grid_columnconfigure((0, 1, 2), weight=1)
+        for col, (label, kind) in enumerate((("Testar IA", "ia"), ("Testar Serper", "serper"), ("Testar Gmail", "gmail"))):
+            ctk.CTkButton(
+                test_row,
+                text=label,
+                height=34,
+                corner_radius=6,
+                fg_color="transparent",
+                hover_color=SURFACE_2,
+                text_color=MUTED,
+                border_width=1,
+                border_color=C["border_bright"],
+                font=(FONT, 12),
+                command=lambda selected=kind: run_config_test(selected),
+            ).grid(row=0, column=col, sticky="ew", padx=(0 if col == 0 else 10, 0))
+
+        search = ctk.CTkFrame(content_area, fg_color="transparent")
+        section_frames["Busca"] = search
+        section_group(search, "Localizacao")
+        add_entry(search, "location", "Pais ou regiao principal da busca", default="Brasil")
+        if not fields["location"].get():
+            fields["location"].set("Brasil")
+
+        profile = ctk.CTkFrame(content_area, fg_color="transparent")
+        section_frames["Perfil e curriculo"] = profile
+        section_group(profile, "Arquivos")
+        add_file_picker(profile, "profile_text_path", "Arquivo TXT com tudo que voce sabe sobre si", [("Texto", "*.txt"), ("Todos", "*.*")], "perfil.txt")
+        add_file_picker(profile, "resume_pdf_path", "Curriculo em PDF", [("PDF", "*.pdf"), ("Todos", "*.*")], "curriculo.pdf")
+
+        filters = ctk.CTkFrame(content_area, fg_color="transparent")
+        section_frames["Termos e filtros"] = filters
+        section_group(filters, "Termos de busca")
+        add_list_box(filters, "search_base_terms", "Areas, cargos ou stacks principais", "SEARCH_BASE_TERMS")
+        two_col = ctk.CTkFrame(filters, fg_color="transparent")
+        two_col.pack(fill="x")
+        two_col.grid_columnconfigure((0, 1), weight=1)
+        senior = ctk.CTkFrame(two_col, fg_color="transparent")
+        senior.grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        mode = ctk.CTkFrame(two_col, fg_color="transparent")
+        mode.grid(row=0, column=1, sticky="ew", padx=(6, 0))
+        add_list_box(senior, "search_seniority_terms", "Senioridade desejada", "SEARCH_SENIORITY_TERMS")
+        add_list_box(mode, "search_work_modes", "Modalidade de trabalho", "SEARCH_WORK_MODES")
+        section_group(filters, "Filtros avancados")
+        add_list_box(filters, "job_location_filters", "Filtros de localizacao aceitos", "JOB_LOCATION_FILTERS")
+        add_list_box(filters, "target_companies", "Empresas-alvo opcionais", "TARGET_COMPANIES", height=72, help_text="Deixe vazio para verificar vagas de todas as empresas.")
+        add_list_box(filters, "search_queries", "Queries manuais extras", "SEARCH_QUERIES", height=120)
+
+        def save_setup():
+            payload = {key: var.get().strip() for key, var in fields.items()}
+            payload["profile_text_path"] = path_vars["profile_text_path"].get().strip()
+            payload["resume_pdf_path"] = path_vars["resume_pdf_path"].get().strip()
+            for key, box in multiline_boxes.items():
+                payload[key] = [line.strip() for line in box.get("1.0", "end").splitlines() if line.strip()]
+            payload["min_score"] = self._parse_int(self.min_score, 90, 1, 100)
+            payload["scan_interval_minutes"] = self._parse_int(self.interval, 60, 1, 720)
+            payload["max_jobs_to_analyze_per_scan"] = self._parse_int(self.max_jobs, 25, 1, 200)
+            save_user_config(payload)
+            engine.refresh_runtime_settings()
+            logging.info("Configuracao salva. O Job Matcher ja pode usar os dados do usuario.")
+            messagebox.showinfo("Job Matcher", "Configuracao salva com sucesso.")
+            window.destroy()
+
+        header_actions = ctk.CTkFrame(header, fg_color="transparent")
+        header_actions.pack(side="right", padx=24)
+        ctk.CTkButton(
+            header_actions,
+            text="Salvar configuracao",
+            width=170,
+            height=36,
+            corner_radius=6,
+            fg_color=ACCENT,
+            hover_color=ACCENT_DIM,
+            text_color=BG,
+            font=(FONT, 12, "bold"),
+            command=save_setup,
+        ).pack(side="left", padx=(0, 8))
+        ctk.CTkButton(
+            header_actions,
+            text="Cancelar",
+            width=100,
+            height=36,
+            corner_radius=6,
+            fg_color="transparent",
+            hover_color=SURFACE_2,
+            text_color=MUTED,
+            border_width=1,
+            border_color=C["border_bright"],
+            font=(FONT, 12),
+            command=window.destroy,
+        ).pack(side="left")
+        window.bind("<Control-s>", lambda _event: save_setup())
+        window.bind("<Escape>", lambda _event: window.destroy())
+        show_section("Credenciais")
+
+    def _sidebar_card(self, title, value_var, accent, parent=None):
+        frame = ctk.CTkFrame(parent or self.sidebar, fg_color=SURFACE, corner_radius=8, border_width=1, border_color=BORDER)
+        ctk.CTkLabel(frame, text=title.upper(), text_color=COLORS["text_muted"], font=(FONT, 10, "bold")).pack(anchor="w", padx=12, pady=(10, 2))
+        value_label = ctk.CTkLabel(frame, textvariable=value_var, text_color=accent, font=(FONT, 13, "bold"), wraplength=112, justify="left")
+        value_label.pack(anchor="w", padx=12, pady=(0, 10))
+        frame.value_label = value_label
         return frame
 
     def _static_sidebar_card(self, title, value, accent):
         var = tk.StringVar(value=value)
         return self._sidebar_card(title, var, accent)
 
+    def _refresh_sidebar_status(self, status):
+        if not hasattr(self, "status_card"):
+            return
+        normalized = (status or "").casefold()
+        if "monitorando" in normalized:
+            color = ACCENT
+            border = ACCENT
+        elif "erro" in normalized or "falh" in normalized:
+            color = DANGER
+            border = BORDER
+        elif "parando" in normalized:
+            color = ACCENT
+            border = BORDER
+        else:
+            color = COLORS["green"]
+            border = BORDER
+        self.status_card.configure(border_color=border)
+        self.status_card.value_label.configure(text_color=color)
+
+    def _refresh_sidebar_context(self):
+        if not hasattr(self, "context_card_var"):
+            return
+        if self.current_tab == "Candidaturas":
+            try:
+                total = calculate_metrics(load_applications()).get("total", 0)
+                self.context_card_var.set(f"{total} candidaturas")
+            except Exception:
+                self.context_card_var.set("Candidaturas")
+        elif self.current_tab == "Mercado":
+            try:
+                count = engine.count_new_market_trend_jobs()
+                self.context_card_var.set(f"{count} novas")
+            except Exception:
+                self.context_card_var.set("Tendencias")
+        else:
+            self.context_card_var.set("Google / Serper")
+
     def _number_field(self, parent, column, label, variable):
         frame = ctk.CTkFrame(parent, fg_color="transparent")
-        frame.grid(row=1, column=column, padx=14, pady=14, sticky="ew")
-        ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).pack(anchor="w")
+        frame.grid(row=2, column=column, padx=(18 if column == 0 else 12, 18 if column == 2 else 0), pady=(14, 14), sticky="ew")
+        ctk.CTkLabel(frame, text=label, text_color=COLORS["text_muted"], font=(FONT, 11)).pack(anchor="w")
         ctk.CTkEntry(
             frame,
             textvariable=variable,
             height=36,
-            corner_radius=7,
-            fg_color=BG,
-            border_color=BORDER,
+            corner_radius=6,
+            fg_color=SURFACE_2,
+            border_width=1,
+            border_color=COLORS["border_bright"],
             text_color=TEXT,
-            font=("Segoe UI", 13),
+            placeholder_text_color=COLORS["text_muted"],
+            font=(FONT, 13),
         ).pack(fill="x", pady=(6, 0))
 
     def _action_button(self, parent, column, text, command, primary=False, danger=False):
-        fg = ACCENT if primary else SURFACE
+        fg = ACCENT if primary else "transparent"
         hover = ACCENT_DIM if primary else SURFACE_2
-        text_color = BG if primary else TEXT
-        border_color = ACCENT if primary else SURFACE_2
+        text_color = BG if primary else MUTED
+        border_color = ACCENT if primary else COLORS["border_bright"]
         if danger:
-            fg = DANGER
+            fg = "transparent"
             hover = DANGER_DARK
-            text_color = TEXT
-            border_color = DANGER
+            text_color = DANGER
+            border_color = "#3A2020"
         ctk.CTkButton(
             parent,
             text=text,
-            height=34,
-            corner_radius=8,
+            height=36,
+            corner_radius=6,
             fg_color=fg,
             hover_color=hover,
             text_color=text_color,
             border_width=1,
             border_color=border_color,
-            font=("Segoe UI", 12, "bold"),
+            font=(FONT, 12, "bold" if primary else "normal"),
             command=command,
         ).grid(row=0, column=column, padx=(0 if column == 0 else 8, 0), sticky="ew")
 
@@ -1449,6 +1902,7 @@ class JobMatcherApp(ctk.CTk):
 
     def _set_status(self, text):
         self.after(0, self.status_text.set, text)
+        self.after(0, self._refresh_sidebar_status, text)
 
     def _set_next_scan(self, text):
         self.after(0, self.next_scan_text.set, text)
@@ -1669,21 +2123,21 @@ class JobMatcherApp(ctk.CTk):
             ("Media resposta", f"{metrics['tempo_medio_resposta']}d"),
         ]
         for index, (label, value) in enumerate(metric_items):
-            card = ctk.CTkFrame(self.tracker_metrics, fg_color=BASE, corner_radius=8, border_width=1, border_color=BORDER)
+            card = ctk.CTkFrame(self.tracker_metrics, fg_color=SURFACE, corner_radius=8, border_width=1, border_color=BORDER)
             card.grid(row=0, column=index, sticky="ew", padx=(0 if index == 0 else 8, 0))
-            ctk.CTkLabel(card, text=label, text_color=MUTED, font=("Segoe UI", 12)).pack(anchor="w", padx=14, pady=(10, 2))
-            ctk.CTkLabel(card, text=str(value), text_color=ACCENT, font=("Segoe UI", 20, "bold")).pack(anchor="w", padx=14, pady=(0, 10))
+            ctk.CTkLabel(card, text=label.upper(), text_color=COLORS["text_muted"], font=(FONT, 10, "bold")).pack(anchor="w", padx=14, pady=(10, 2))
+            ctk.CTkLabel(card, text=str(value), text_color=ACCENT if index != 3 else TEXT, font=(FONT, 20, "bold")).pack(anchor="w", padx=14, pady=(0, 10))
         if alerts:
             names = "; ".join(f"{item.get('cargo')} @ {item.get('empresa')}" for item in alerts[:4])
             if len(alerts) > 4:
                 names += f"; +{len(alerts) - 4}"
-            banner = ctk.CTkFrame(self.tracker_metrics, fg_color="#3A2D14", corner_radius=8, border_width=1, border_color=ACCENT_DIM)
+            banner = ctk.CTkFrame(self.tracker_metrics, fg_color=COLORS["amber_subtle"], corner_radius=8, border_width=1, border_color=ACCENT_DIM)
             banner.grid(row=1, column=0, columnspan=4, sticky="ew", pady=(10, 0))
             ctk.CTkLabel(
                 banner,
                 text=f"Follow-up pendente: {names}",
-                text_color="#F1D38B",
-                font=("Segoe UI", 12, "bold"),
+                text_color=ACCENT,
+                font=(FONT, 12, "bold"),
                 wraplength=900,
                 justify="left",
             ).pack(anchor="w", padx=14, pady=10)
@@ -1715,22 +2169,22 @@ class JobMatcherApp(ctk.CTk):
 
     def _tracker_card(self, parent, app_id, item):
         selected = app_id == self.selected_application_id
-        card = ctk.CTkFrame(parent, fg_color=SURFACE_2 if selected else SURFACE, corner_radius=8, border_width=1, border_color=ACCENT if selected else BORDER)
+        card = ctk.CTkFrame(parent, fg_color=SURFACE_2 if selected else SURFACE, corner_radius=7, border_width=1, border_color=ACCENT if selected else BORDER)
         card.pack(fill="x", padx=8, pady=(8, 0))
         title = item.get("cargo", "Vaga sem titulo")
         company = item.get("empresa", "Nao informada")
         score = item.get("score_fit")
-        score_text = f" | {score}%" if score is not None else ""
+        score_text = f"\n* {score}% fit" if score is not None else ""
         button = ctk.CTkButton(
             card,
             text=f"{title}\n{company}{score_text}",
             height=76,
-            corner_radius=8,
+            corner_radius=7,
             fg_color="transparent",
             hover_color=SURFACE_2,
             text_color=TEXT,
             anchor="w",
-            font=("Segoe UI", 12, "bold"),
+            font=(FONT, 12, "bold"),
             command=lambda: self.select_tracker_application(app_id),
         )
         button.pack(fill="x", padx=8, pady=8)
@@ -1760,7 +2214,7 @@ class JobMatcherApp(ctk.CTk):
         self.tracker_notes.insert("1.0", item.get("notas", ""))
         for child in self.tracker_move_frame.winfo_children():
             child.destroy()
-        ctk.CTkLabel(self.tracker_move_frame, text="Mover para", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        ctk.CTkLabel(self.tracker_move_frame, text="Mover para", text_color=C["text_muted"], font=(FONT, 11)).grid(row=0, column=0, sticky="w", pady=(0, 6))
         row = 1
         current = item.get("status", "enviado")
         for status in STATUS_ORDER:
@@ -1770,12 +2224,13 @@ class JobMatcherApp(ctk.CTk):
                 self.tracker_move_frame,
                 text=STATUS_LABELS[status],
                 height=32,
-                corner_radius=8,
-                fg_color=SURFACE,
+                corner_radius=6,
+                fg_color="transparent",
                 hover_color=SURFACE_2,
-                text_color=TEXT,
+                text_color=ACCENT if status in {"triagem", "entrevista"} else MUTED,
                 border_width=1,
-                border_color=BORDER,
+                border_color=ACCENT_DIM if status in {"triagem", "entrevista"} else C["border_bright"],
+                font=(FONT, 12),
                 command=lambda target=status: self.move_tracker_application(target),
             ).grid(row=row, column=0, sticky="ew", pady=(0, 6))
             row += 1
@@ -1803,8 +2258,12 @@ class JobMatcherApp(ctk.CTk):
         try:
             count = engine.count_new_market_trend_jobs()
             self.market_new_jobs.set(f"Vagas novas para tendencias: {count}")
+            if hasattr(self, "market_badge"):
+                self.market_badge.configure(text=f"{count} novas")
         except Exception as exc:
             self.market_new_jobs.set("Vagas novas para tendencias: erro ao contar")
+            if hasattr(self, "market_badge"):
+                self.market_badge.configure(text="erro")
             self.market_status.set(str(exc))
 
     def generate_market_trends(self):
@@ -1865,7 +2324,7 @@ class JobMatcherApp(ctk.CTk):
         for index, report in enumerate(reports):
             row = ctk.CTkFrame(self.reports_list, fg_color=SURFACE, corner_radius=8, border_width=1, border_color=BORDER)
             row.grid(row=index, column=0, sticky="ew", pady=(0, 10))
-            row.grid_columnconfigure(0, weight=1)
+            row.grid_columnconfigure(1, weight=1)
 
             title = report.get("title") or "Relatorio"
             company = report.get("company") or ""
@@ -1874,33 +2333,49 @@ class JobMatcherApp(ctk.CTk):
             if score is not None:
                 title_line = f"{score}% - {title_line}"
 
+            icon_text = {
+                "job_analysis": "DOC",
+                "ats": "ATS",
+                "cover_letter": "TXT",
+                "market_trends": "BAR",
+                "scan": "LOG",
+                "resume_optimization": "CV",
+            }.get(report.get("type"), "REP")
+            icon = ctk.CTkFrame(row, width=32, height=32, fg_color=COLORS["amber_subtle"], corner_radius=6)
+            icon.grid(row=0, column=0, rowspan=2, padx=(14, 10), pady=12, sticky="w")
+            icon.grid_propagate(False)
+            ctk.CTkLabel(icon, text=icon_text, text_color=ACCENT, font=(FONT, 9, "bold")).grid(row=0, column=0, sticky="nsew")
+            icon.grid_columnconfigure(0, weight=1)
+            icon.grid_rowconfigure(0, weight=1)
+
             ctk.CTkLabel(
                 row,
                 text=title_line,
                 text_color=TEXT,
-                font=("Segoe UI", 14, "bold"),
+                font=(FONT, 13, "bold"),
                 anchor="w",
-            ).grid(row=0, column=0, padx=14, pady=(12, 2), sticky="ew")
+            ).grid(row=0, column=1, padx=0, pady=(12, 2), sticky="ew")
             ctk.CTkLabel(
                 row,
                 text=f"{report.get('detail', '')} | {report.get('created_at', '')}",
-                text_color=MUTED,
-                font=("Segoe UI", 12),
+                text_color=COLORS["text_muted"],
+                font=(FONT, 11),
                 anchor="w",
-            ).grid(row=1, column=0, padx=14, pady=(0, 12), sticky="ew")
+            ).grid(row=1, column=1, padx=0, pady=(0, 12), sticky="ew")
             ctk.CTkButton(
                 row,
                 text="Abrir",
                 width=90,
-                height=34,
-                corner_radius=8,
-                fg_color=BG,
+                height=28,
+                corner_radius=6,
+                fg_color="transparent",
                 hover_color=SURFACE_2,
-                text_color=TEXT,
+                text_color=MUTED,
                 border_width=1,
-                border_color=BORDER,
+                border_color=COLORS["border_bright"],
+                font=(FONT, 12),
                 command=lambda path=report.get("open_path") or report.get("md_path"): self.open_report_file(path),
-            ).grid(row=0, column=1, rowspan=2, padx=14, pady=12, sticky="e")
+            ).grid(row=0, column=2, rowspan=2, padx=14, pady=12, sticky="e")
 
     def open_report_file(self, path):
         if not path:
@@ -2085,6 +2560,469 @@ class JobMatcherApp(ctk.CTk):
             lines.append("Relatorio salvo")
             lines.append(f"- {report_path}")
         return "\n".join(lines).strip() + "\n"
+
+    def _ui_card(self, parent, **kwargs):
+        return ctk.CTkFrame(
+            parent,
+            fg_color=kwargs.pop("fg_color", SURFACE),
+            corner_radius=kwargs.pop("corner_radius", 10),
+            border_width=kwargs.pop("border_width", 1),
+            border_color=kwargs.pop("border_color", BORDER),
+            **kwargs,
+        )
+
+    def _ui_button(self, parent, text, command, kind="ghost", width=None):
+        styles = {
+            "primary": {
+                "fg_color": ACCENT,
+                "hover_color": ACCENT_DIM,
+                "text_color": BG,
+                "border_width": 0,
+                "border_color": ACCENT,
+                "font": (FONT, 12, "bold"),
+            },
+            "ghost": {
+                "fg_color": "transparent",
+                "hover_color": SURFACE_2,
+                "text_color": MUTED,
+                "border_width": 1,
+                "border_color": C["border_bright"],
+                "font": (FONT, 12),
+            },
+            "outline": {
+                "fg_color": "transparent",
+                "hover_color": C["amber_subtle"],
+                "text_color": ACCENT,
+                "border_width": 1,
+                "border_color": ACCENT_DIM,
+                "font": (FONT, 12),
+            },
+            "danger": {
+                "fg_color": "transparent",
+                "hover_color": DANGER_DARK,
+                "text_color": DANGER,
+                "border_width": 1,
+                "border_color": "#3A2020",
+                "font": (FONT, 12),
+            },
+        }
+        return ctk.CTkButton(
+            parent,
+            text=text,
+            height=36,
+            width=width or 120,
+            corner_radius=6,
+            command=command,
+            **styles[kind],
+        )
+
+    def _ui_entry(self, parent, variable):
+        return ctk.CTkEntry(
+            parent,
+            textvariable=variable,
+            height=36,
+            corner_radius=6,
+            fg_color=SURFACE_2,
+            border_width=1,
+            border_color=C["border_bright"],
+            text_color=TEXT,
+            placeholder_text_color=C["text_muted"],
+            font=(FONT, 13),
+        )
+
+    def _ui_textbox(self, parent, height=220, mono=False):
+        return ctk.CTkTextbox(
+            parent,
+            height=height,
+            corner_radius=6,
+            fg_color=SURFACE_2,
+            border_width=1,
+            border_color=C["border_bright"],
+            text_color=TEXT,
+            font=("Consolas", 11) if mono else (FONT, 13),
+            wrap="word",
+        )
+
+    def _page_header(self, parent, title, subtitle=None, action=None):
+        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header.grid(row=0, column=0, sticky="ew", padx=28, pady=(26, 18))
+        header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(header, text=title, font=(FONT, 22, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w")
+        if subtitle:
+            ctk.CTkLabel(header, text=subtitle, font=(FONT, 12), text_color=C["text_muted"]).grid(row=1, column=0, sticky="w", pady=(4, 0))
+        if action is not None:
+            action.grid(row=0, column=1, rowspan=2, sticky="e", padx=(18, 0))
+        return header
+
+    def _section_label(self, parent, text, row=0, column=0, **grid):
+        label = ctk.CTkLabel(parent, text=text.upper(), font=(FONT, 10, "bold"), text_color=MUTED)
+        label.grid(row=row, column=column, sticky="w", **grid)
+        return label
+
+    def _field(self, parent, label, variable, row, column, padx=(0, 0)):
+        frame = ctk.CTkFrame(parent, fg_color="transparent")
+        frame.grid(row=row, column=column, sticky="ew", padx=padx, pady=(12, 0))
+        frame.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(frame, text=label, text_color=C["text_muted"], font=(FONT, 11)).grid(row=0, column=0, sticky="w", pady=(0, 5))
+        self._ui_entry(frame, variable).grid(row=1, column=0, sticky="ew")
+
+    def _build_layout(self):
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(0, weight=1)
+
+        self.sidebar = ctk.CTkFrame(self, width=154, fg_color=BG, corner_radius=0)
+        self.sidebar.grid(row=0, column=0, sticky="nsew")
+        self.sidebar.grid_propagate(False)
+        self.sidebar.grid_rowconfigure(3, weight=1)
+        ctk.CTkFrame(self.sidebar, width=1, fg_color=BORDER, corner_radius=0).grid(row=0, column=1, rowspan=8, sticky="nse")
+
+        brand = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        brand.grid(row=0, column=0, sticky="ew", padx=14, pady=(20, 16))
+        brand.grid_columnconfigure(0, weight=1)
+        mark = ctk.CTkFrame(brand, width=36, height=36, fg_color=C["amber_subtle"], border_width=1, border_color=ACCENT_DIM, corner_radius=8)
+        mark.grid(row=0, column=0, sticky="n", pady=(0, 8))
+        mark.grid_propagate(False)
+        ctk.CTkLabel(mark, text="JM", text_color=ACCENT, font=(FONT, 12, "bold")).place(relx=0.5, rely=0.5, anchor="center")
+        ctk.CTkLabel(brand, text=f"v{app_version()}", font=(FONT, 10), text_color=C["text_muted"]).grid(row=1, column=0, sticky="n")
+
+        self.nav_area = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        self.nav_area.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        self.nav_buttons = {}
+        nav_items = (
+            ("Menu", "Menu"),
+            ("Busca", "Busca"),
+            ("Analisar vaga", "Analisar"),
+            ("Otimizar curriculo", "Otimizar"),
+            ("Candidaturas", "Candidaturas"),
+            ("Mercado", "Mercado"),
+            ("Relatorios", "Relatorios"),
+        )
+        for index, (name, label) in enumerate(nav_items):
+            button = ctk.CTkButton(
+                self.nav_area,
+                text=label,
+                height=36,
+                corner_radius=7,
+                fg_color="transparent",
+                hover_color=SURFACE,
+                text_color=MUTED,
+                border_width=0,
+                anchor="w",
+                font=(FONT, 12),
+                command=lambda selected=name: self._show_tab(selected),
+            )
+            button.grid(row=index, column=0, sticky="ew", pady=(0, 4))
+            self.nav_buttons[name] = button
+
+        footer = ctk.CTkFrame(self.sidebar, fg_color="transparent")
+        footer.grid(row=4, column=0, sticky="ew", padx=10, pady=(0, 16))
+        self._ui_button(footer, "Configurar", self.open_setup_window, "primary", width=118).pack(fill="x", pady=(0, 8))
+        self._ui_button(footer, "Sair", self._on_close, "danger").pack(fill="x")
+
+        self.content = ctk.CTkFrame(self, fg_color=BASE, corner_radius=0)
+        self.content.grid(row=0, column=1, sticky="nsew")
+        self.content.grid_columnconfigure(0, weight=1)
+        self.content.grid_rowconfigure(0, weight=1)
+
+        self.tab_frames = {
+            "Menu": ctk.CTkFrame(self.content, fg_color=BASE, corner_radius=0),
+            "Busca": ctk.CTkFrame(self.content, fg_color=BASE, corner_radius=0),
+            "Analisar vaga": ctk.CTkFrame(self.content, fg_color=BASE, corner_radius=0),
+            "Otimizar curriculo": ctk.CTkFrame(self.content, fg_color=BASE, corner_radius=0),
+            "Candidaturas": ctk.CTkFrame(self.content, fg_color=BASE, corner_radius=0),
+            "Mercado": ctk.CTkFrame(self.content, fg_color=BASE, corner_radius=0),
+            "Relatorios": ctk.CTkFrame(self.content, fg_color=BASE, corner_radius=0),
+        }
+        for frame in self.tab_frames.values():
+            frame.grid_columnconfigure(0, weight=1)
+            frame.grid_rowconfigure(1, weight=1)
+
+        self._new_home_page(self.tab_frames["Menu"])
+        self._new_search_page(self.tab_frames["Busca"])
+        self._new_analysis_page(self.tab_frames["Analisar vaga"])
+        self._new_optimization_page(self.tab_frames["Otimizar curriculo"])
+        self._new_tracker_page(self.tab_frames["Candidaturas"])
+        self._new_market_page(self.tab_frames["Mercado"])
+        self._new_reports_page(self.tab_frames["Relatorios"])
+        self._show_tab("Menu")
+        self._refresh_sidebar_status(self.status_text.get())
+
+    def _show_tab(self, name):
+        for frame in self.tab_frames.values():
+            frame.grid_forget()
+        if name == "Menu":
+            self.sidebar.grid_remove()
+            self.content.grid(row=0, column=0, columnspan=2, sticky="nsew")
+        else:
+            self.sidebar.grid(row=0, column=0, sticky="nsew")
+            self.content.grid(row=0, column=1, columnspan=1, sticky="nsew")
+        self.tab_frames[name].grid(row=0, column=0, sticky="nsew")
+        self.current_tab = name
+        for tab_name, button in self.nav_buttons.items():
+            if tab_name == name:
+                button.configure(fg_color=C["amber_subtle"], text_color=ACCENT, font=(FONT, 12, "bold"))
+            else:
+                button.configure(fg_color="transparent", text_color=MUTED, font=(FONT, 12))
+        if name == "Relatorios":
+            self.refresh_reports()
+        elif name == "Candidaturas":
+            self.refresh_tracker()
+        elif name == "Mercado":
+            self.refresh_trends_tab()
+        self._refresh_sidebar_context()
+
+    def _new_home_page(self, parent):
+        self._page_header(parent, "Job Matcher", "Menu principal com status, atalhos e acesso rapido as areas do app.")
+        body = ctk.CTkFrame(parent, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew", padx=36, pady=(0, 36))
+        body.grid_columnconfigure((0, 1, 2), weight=1)
+        body.grid_rowconfigure(3, weight=1)
+
+        self.context_card_var = tk.StringVar(value="Google / Serper")
+        status_cards = (
+            ("Status", self.status_text, C["green"]),
+            ("Proxima busca", self.next_scan_text, TEXT),
+            ("Fonte", self.context_card_var, ACCENT),
+        )
+        for index, (title, variable, accent) in enumerate(status_cards):
+            card = self._sidebar_card(title, variable, accent, parent=body)
+            card.grid(row=0, column=index, sticky="ew", padx=(0 if index == 0 else 12, 0), pady=(0, 18))
+            if index == 0:
+                self.status_card = card
+
+        menu_items = (
+            ("Busca", "Varredura automatica, busca pontual e logs de execucao."),
+            ("Analisar vaga", "Cole uma vaga, veja compatibilidade e registre candidaturas."),
+            ("Otimizar curriculo", "Gere uma versao direcionada para uma vaga especifica."),
+            ("Candidaturas", "Acompanhe o funil depois de clicar em Registrar em uma analise."),
+            ("Mercado", "Leia tendencias a partir das vagas novas encontradas."),
+            ("Relatorios", "Abra historicos HTML, Markdown e JSON gerados pelo app."),
+        )
+        for index, (title, description) in enumerate(menu_items):
+            row = 1 + (index // 3)
+            column = index % 3
+            card = self._ui_card(body)
+            card.grid(row=row, column=column, sticky="nsew", padx=(0 if column == 0 else 12, 0), pady=(0 if row == 1 else 12, 0))
+            card.grid_columnconfigure(0, weight=1)
+            card.grid_rowconfigure(2, weight=1)
+            ctk.CTkLabel(card, text=title, font=(FONT, 18, "bold"), text_color=TEXT).grid(row=0, column=0, sticky="w", padx=20, pady=(20, 6))
+            ctk.CTkLabel(card, text=description, font=(FONT, 12), text_color=C["text_muted"], wraplength=360, justify="left").grid(row=1, column=0, sticky="nw", padx=20)
+            self._ui_button(card, "Abrir", lambda target=title: self._show_tab(target), "ghost", width=92).grid(row=3, column=0, sticky="w", padx=20, pady=(18, 20))
+
+        actions = self._ui_card(body, border_color=ACCENT_DIM)
+        actions.grid(row=3, column=0, columnspan=3, sticky="ew", pady=(18, 0))
+        actions.grid_columnconfigure(0, weight=1)
+        actions.grid_columnconfigure((1, 2, 3, 4), weight=0)
+        ctk.CTkLabel(
+            actions,
+            text="Acoes rapidas",
+            font=(FONT, 16, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w", padx=20, pady=20)
+        self._ui_button(actions, "Configurar", self.open_setup_window, "primary", width=150).grid(row=0, column=1, sticky="e", padx=(0, 10), pady=20)
+        self._ui_button(actions, "Abrir relatorios", self.open_reports_folder, "ghost", width=150).grid(row=0, column=2, sticky="e", padx=(0, 10), pady=20)
+        self._ui_button(actions, "E-mail teste", self.send_test_email, "ghost", width=130).grid(row=0, column=3, sticky="e", padx=(0, 10), pady=20)
+        self._ui_button(actions, "Sair", self._on_close, "danger", width=100).grid(row=0, column=4, sticky="e", padx=(0, 20), pady=20)
+
+    def _new_search_page(self, parent):
+        self._page_header(parent, "Painel de busca", "Configure a varredura, execute buscas pontuais e acompanhe os eventos importantes.")
+        body = ctk.CTkFrame(parent, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew", padx=28, pady=(0, 28))
+        body.grid_columnconfigure(0, weight=0, minsize=460)
+        body.grid_columnconfigure(1, weight=1)
+        body.grid_rowconfigure(0, weight=1)
+
+        params = self._ui_card(body)
+        params.grid(row=0, column=0, sticky="new", padx=(0, 16))
+        params.grid_columnconfigure(0, weight=1)
+        self._section_label(params, "Parametros da varredura", row=0, column=0, padx=18, pady=(16, 12))
+        ctk.CTkFrame(params, height=1, fg_color=BORDER, corner_radius=0).grid(row=1, column=0, padx=18, sticky="ew")
+        self._field(params, "Vagas por varredura", self.max_jobs, 2, 0, padx=18)
+        self._field(params, "Score minimo", self.min_score, 3, 0, padx=18)
+        self._field(params, "Intervalo (min)", self.interval, 4, 0, padx=18)
+        buttons = ctk.CTkFrame(params, fg_color="transparent")
+        buttons.grid(row=5, column=0, sticky="ew", padx=18, pady=(18, 18))
+        buttons.grid_columnconfigure((0, 1), weight=1)
+        self._ui_button(buttons, "Iniciar monitoramento", self.start_monitoring, "primary").grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        self._ui_button(buttons, "Buscar agora", self.run_once, "ghost").grid(row=1, column=0, sticky="ew", padx=(0, 8))
+        self._ui_button(buttons, "E-mail teste", self.send_test_email, "ghost").grid(row=1, column=1, sticky="ew")
+        self._ui_button(buttons, "Parar", self.stop_monitoring, "danger").grid(row=2, column=0, columnspan=2, sticky="ew", pady=(8, 0))
+
+        log_card = self._ui_card(body)
+        log_card.grid(row=0, column=1, sticky="nsew")
+        log_card.grid_columnconfigure(0, weight=1)
+        log_card.grid_rowconfigure(1, weight=1)
+        log_head = ctk.CTkFrame(log_card, fg_color="transparent")
+        log_head.grid(row=0, column=0, sticky="ew", padx=18, pady=(16, 10))
+        log_head.grid_columnconfigure(0, weight=1)
+        self._section_label(log_head, "Atividade da busca")
+        self._ui_button(log_head, "Limpar", self._clear_log, "ghost", width=72).grid(row=0, column=1, sticky="e")
+        self.log_box = ctk.CTkTextbox(log_card, fg_color=BG, border_width=1, border_color=BORDER, text_color=C["text_secondary"], font=("Consolas", 11), corner_radius=8, wrap="word")
+        self.log_box.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 18))
+        self.log_box.insert("end", "Pronto. Configure a busca e clique em Iniciar monitoramento ou Buscar agora.\n")
+        self.log_box.configure(state="disabled")
+
+    def _new_analysis_page(self, parent):
+        self._page_header(parent, "Analisar vaga", "Cole a descricao completa. Titulo e empresa ajudam, mas sao opcionais.")
+        body = ctk.CTkFrame(parent, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew", padx=28, pady=(0, 28))
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_columnconfigure(1, weight=0, minsize=360)
+        body.grid_rowconfigure(0, weight=1)
+        form = self._ui_card(body)
+        form.grid(row=0, column=0, sticky="nsew", padx=(0, 16))
+        form.grid_columnconfigure((0, 1), weight=1)
+        form.grid_rowconfigure(2, weight=1)
+        self._field(form, "Titulo da vaga", self.analysis_title, 0, 0, padx=(18, 8))
+        self._field(form, "Empresa", self.analysis_company, 0, 1, padx=(8, 18))
+        ctk.CTkLabel(form, text="Descricao da vaga", font=(FONT, 11), text_color=C["text_muted"]).grid(row=1, column=0, columnspan=2, sticky="w", padx=18, pady=(16, 6))
+        self.analysis_description = self._ui_textbox(form, height=320)
+        self.analysis_description.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=18)
+        ctk.CTkFrame(form, height=1, fg_color=BORDER, corner_radius=0).grid(row=3, column=0, columnspan=2, sticky="ew", padx=18, pady=(16, 14))
+        actions = ctk.CTkFrame(form, fg_color="transparent")
+        actions.grid(row=4, column=0, columnspan=2, sticky="ew", padx=18, pady=(0, 18))
+        actions.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.analyze_button = self._ui_button(actions, "Analisar compatibilidade", self.analyze_single_job, "primary")
+        self.analyze_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.ats_button = self._ui_button(actions, "Simular ATS", self.simulate_ats, "outline")
+        self.ats_button.grid(row=0, column=1, sticky="ew", padx=(0, 8))
+        self.cover_letter_button = self._ui_button(actions, "Gerar carta", self.generate_cover_letter, "outline")
+        self.cover_letter_button.grid(row=0, column=2, sticky="ew", padx=(0, 8))
+        self.register_application_button = self._ui_button(actions, "Registrar", self.register_last_application, "ghost")
+        self.register_application_button.configure(state="disabled")
+        self.register_application_button.grid(row=0, column=3, sticky="ew")
+        self._ui_button(actions, "Copiar analise", self.copy_analysis, "ghost").grid(row=1, column=0, sticky="ew", padx=(0, 8), pady=(8, 0))
+        self.analysis_optimize_button = self._ui_button(actions, "Otimizar esta vaga", self.use_last_analyzed_job, "ghost")
+        self.analysis_optimize_button.configure(state="disabled")
+        self.analysis_optimize_button.grid(row=1, column=1, sticky="ew", padx=(0, 8), pady=(8, 0))
+        self._ui_button(actions, "Limpar", self.clear_analysis, "ghost").grid(row=1, column=2, sticky="ew", padx=(0, 8), pady=(8, 0))
+
+        result = self._ui_card(body)
+        result.grid(row=0, column=1, sticky="nsew")
+        result.grid_columnconfigure(0, weight=1)
+        result.grid_rowconfigure(1, weight=1)
+        self._section_label(result, "Resultado", row=0, column=0, padx=18, pady=(18, 10))
+        self.analysis_result_box = ctk.CTkTextbox(result, fg_color=BG, border_width=1, border_color=BORDER, text_color=C["text_secondary"], font=(FONT, 12), corner_radius=8, wrap="word")
+        self.analysis_result_box.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 18))
+        self.analysis_result_box.insert("end", "A analise vai aparecer aqui.\n\nO app vai mostrar compatibilidade, pontos fortes, gaps e melhorias recomendadas para o curriculo atual.\n")
+        self.analysis_result_box.configure(state="disabled")
+
+    def _new_optimization_page(self, parent):
+        header = self._page_header(parent, "Otimizar curriculo", "Direcione seu curriculo para uma vaga sem inventar experiencia.")
+        self._ui_button(header, "Usar vaga analisada", self.use_last_analyzed_job, "ghost", width=180).grid(row=0, column=1, rowspan=2, sticky="e", padx=(18, 0))
+        body = ctk.CTkFrame(parent, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew", padx=28, pady=(0, 28))
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_columnconfigure(1, weight=0, minsize=400)
+        body.grid_rowconfigure(0, weight=1)
+        form = self._ui_card(body)
+        form.grid(row=0, column=0, sticky="nsew", padx=(0, 16))
+        form.grid_columnconfigure((0, 1), weight=1)
+        form.grid_rowconfigure(2, weight=1)
+        self._field(form, "Titulo da vaga", self.optimization_title, 0, 0, padx=(18, 8))
+        self._field(form, "Empresa", self.optimization_company, 0, 1, padx=(8, 18))
+        ctk.CTkLabel(form, text="Descricao da vaga", font=(FONT, 11), text_color=C["text_muted"]).grid(row=1, column=0, columnspan=2, sticky="w", padx=18, pady=(16, 6))
+        self.optimization_description = self._ui_textbox(form, height=320)
+        self.optimization_description.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=18)
+        actions = ctk.CTkFrame(form, fg_color="transparent")
+        actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=18, pady=18)
+        actions.grid_columnconfigure((0, 1, 2), weight=1)
+        self.optimize_button = self._ui_button(actions, "Gerar otimizacao", self.optimize_resume, "primary")
+        self.optimize_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self._ui_button(actions, "Copiar otimizacao", self.copy_optimization, "ghost").grid(row=0, column=1, sticky="ew", padx=(0, 8))
+        self._ui_button(actions, "Limpar", self.clear_optimization, "ghost").grid(row=0, column=2, sticky="ew")
+        result = self._ui_card(body)
+        result.grid(row=0, column=1, sticky="nsew")
+        result.grid_columnconfigure(0, weight=1)
+        result.grid_rowconfigure(1, weight=1)
+        self._section_label(result, "Curriculo direcionado", row=0, column=0, padx=18, pady=(18, 10))
+        self.optimization_result_box = ctk.CTkTextbox(result, fg_color=BG, border_width=1, border_color=BORDER, text_color=C["text_secondary"], font=(FONT, 12), corner_radius=8, wrap="word")
+        self.optimization_result_box.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 18))
+        self.optimization_result_box.insert("end", "A otimizacao vai aparecer aqui.\n\nO app vai sugerir headline, resumo, skills, bullets e alertas de honestidade.\n")
+        self.optimization_result_box.configure(state="disabled")
+
+    def _new_tracker_page(self, parent):
+        header = self._page_header(
+            parent,
+            "Candidaturas",
+            "Acompanhe o funil, registre contatos e organize proximas acoes. Para adicionar uma vaga aqui, analise uma vaga e clique em Registrar.",
+        )
+        self._ui_button(header, "Atualizar", self.refresh_tracker, "ghost", width=110).grid(row=0, column=1, rowspan=2, sticky="e", padx=(18, 0))
+        body = ctk.CTkFrame(parent, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew", padx=28, pady=(0, 28))
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_columnconfigure(1, weight=0, minsize=320)
+        body.grid_rowconfigure(1, weight=1)
+        self.tracker_metrics = ctk.CTkFrame(body, fg_color="transparent")
+        self.tracker_metrics.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 14))
+        self.tracker_metrics.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        self.tracker_board = ctk.CTkFrame(body, fg_color="transparent")
+        self.tracker_board.grid(row=1, column=0, sticky="nsew", padx=(0, 16))
+        self.tracker_board.grid_columnconfigure(tuple(range(len(STATUS_ORDER))), weight=1)
+        self.tracker_board.grid_rowconfigure(1, weight=1)
+        self.tracker_columns = {}
+        for index, status in enumerate(STATUS_ORDER):
+            ctk.CTkLabel(self.tracker_board, text=STATUS_LABELS[status].upper(), font=(FONT, 10, "bold"), text_color=C["text_muted"]).grid(row=0, column=index, sticky="w", padx=(0 if index == 0 else 8, 0), pady=(0, 8))
+            col = ctk.CTkScrollableFrame(self.tracker_board, fg_color=SURFACE, border_width=1, border_color=BORDER, corner_radius=8, scrollbar_button_color=C["border"], scrollbar_button_hover_color=C["border_bright"])
+            col.grid(row=1, column=index, sticky="nsew", padx=(0 if index == 0 else 8, 0))
+            self.tracker_columns[status] = col
+        self.tracker_detail = self._ui_card(body)
+        self.tracker_detail.grid(row=1, column=1, sticky="nsew")
+        self.tracker_detail.grid_columnconfigure(0, weight=1)
+        self._section_label(self.tracker_detail, "Detalhes", row=0, column=0, padx=18, pady=(18, 10))
+        self.tracker_detail_title = ctk.CTkLabel(self.tracker_detail, text="Selecione uma candidatura.", font=(FONT, 13), text_color=MUTED, wraplength=280, justify="left")
+        self.tracker_detail_title.grid(row=1, column=0, padx=18, pady=(0, 14), sticky="ew")
+        self.tracker_contact = tk.StringVar()
+        self.tracker_next_action = tk.StringVar()
+        self._tracker_entry("Contato", self.tracker_contact, 2)
+        self._tracker_entry("Proxima acao", self.tracker_next_action, 3)
+        ctk.CTkLabel(self.tracker_detail, text="Notas", text_color=C["text_muted"], font=(FONT, 11)).grid(row=4, column=0, padx=18, sticky="w")
+        self.tracker_notes = self._ui_textbox(self.tracker_detail, height=110)
+        self.tracker_notes.grid(row=5, column=0, sticky="ew", padx=18, pady=(6, 12))
+        self._ui_button(self.tracker_detail, "Salvar detalhes", self.save_tracker_details, "primary").grid(row=6, column=0, sticky="ew", padx=18, pady=(0, 12))
+        self.tracker_move_frame = ctk.CTkFrame(self.tracker_detail, fg_color="transparent")
+        self.tracker_move_frame.grid(row=7, column=0, sticky="ew", padx=18, pady=(0, 18))
+        self.tracker_move_frame.grid_columnconfigure(0, weight=1)
+        self.refresh_tracker()
+
+    def _new_market_page(self, parent):
+        header = self._page_header(parent, "Mercado", "Transforme as vagas encontradas em leitura de tendencia.")
+        self.market_button = self._ui_button(header, "Gerar relatorio de mercado", self.generate_market_trends, "primary", width=210)
+        self.market_button.grid(row=0, column=1, rowspan=2, sticky="e", padx=(18, 0))
+        body = ctk.CTkFrame(parent, fg_color="transparent")
+        body.grid(row=1, column=0, sticky="nsew", padx=28, pady=(0, 28))
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_rowconfigure(1, weight=1)
+        market = self._ui_card(body, border_color=ACCENT_DIM)
+        market.grid(row=0, column=0, sticky="ew", pady=(0, 16))
+        market.grid_columnconfigure(0, weight=1)
+        self.market_new_jobs = tk.StringVar(value="Vagas novas para tendencias: -")
+        ctk.CTkLabel(market, text="VAGAS NOVAS PARA ANALISE", font=(FONT, 10, "bold"), text_color=C["text_muted"]).grid(row=0, column=0, sticky="w", padx=18, pady=(16, 2))
+        self.market_badge = ctk.CTkLabel(market, text="- novas", fg_color=C["amber_subtle"], text_color=ACCENT, font=(FONT, 12, "bold"), corner_radius=6)
+        self.market_badge.grid(row=0, column=1, rowspan=2, padx=18, pady=16, sticky="e")
+        self.market_total_label = ctk.CTkLabel(market, text="Historico local", text_color=TEXT, font=(FONT, 20, "bold"))
+        self.market_total_label.grid(row=1, column=0, sticky="w", padx=18, pady=(0, 16))
+        progress = self._ui_card(body)
+        progress.grid(row=1, column=0, sticky="nsew")
+        progress.grid_columnconfigure(0, weight=1)
+        progress.grid_rowconfigure(1, weight=1)
+        self._section_label(progress, "Progresso", row=0, column=0, padx=18, pady=(18, 10))
+        self.market_log = ctk.CTkTextbox(progress, fg_color=BG, border_width=1, border_color=BORDER, text_color=C["text_secondary"], font=("Consolas", 11), corner_radius=8, wrap="word")
+        self.market_log.grid(row=1, column=0, sticky="nsew", padx=18, pady=(0, 18))
+        self.market_log.insert("end", "Aguardando geracao de relatorio.\n")
+        self.market_log.configure(state="disabled")
+        self.refresh_trends_tab()
+
+    def _new_reports_page(self, parent):
+        header = self._page_header(parent, "Relatorios", "Historico local das varreduras, analises manuais e otimizacoes.")
+        self._ui_button(header, "Atualizar", self.refresh_reports, "ghost", width=110).grid(row=0, column=1, rowspan=2, sticky="e", padx=(18, 0))
+        body = self._ui_card(parent)
+        body.grid(row=1, column=0, sticky="nsew", padx=28, pady=(0, 28))
+        body.grid_columnconfigure(0, weight=1)
+        body.grid_rowconfigure(0, weight=1)
+        self.reports_list = ctk.CTkScrollableFrame(body, fg_color="transparent", scrollbar_button_color=C["border"], scrollbar_button_hover_color=C["border_bright"])
+        self.reports_list.grid(row=0, column=0, sticky="nsew", padx=18, pady=18)
+        self.reports_list.grid_columnconfigure(0, weight=1)
 
     def _set_analysis_result(self, text):
         self.analysis_result_box.configure(state="normal")

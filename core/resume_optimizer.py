@@ -18,7 +18,9 @@ class ResumeOptimization:
 
 
 _PROMPT = """
-Voce e um especialista senior em curriculos de tecnologia.
+Voce e um especialista senior em curriculos de tecnologia, com experiencia em triagem,
+ATS, recrutamento tecnico e posicionamento de carreira. Seu trabalho e orientar como
+um senior revisando um curriculo real: claro, criterioso, honesto e orientado a impacto.
 
 ## CURRICULO/PERFIL ATUAL DO USUARIO
 {profile}
@@ -49,6 +51,8 @@ Retorne SOMENTE JSON valido, sem markdown e sem texto extra:
 }}
 
 ## REGRAS IMPORTANTES
+- Pense como senior: destaque impacto, escopo, tecnologias reais, senioridade evidenciada e aderencia aos requisitos principais.
+- Priorize o que aumenta sinal para recrutador e ATS sem transformar o curriculo em texto generico.
 - Nao invente experiencia, cargo, senioridade, empresa, certificacao, formacao, projeto ou tecnologia.
 - Nao diga que o usuario tem uma skill se ela nao aparece no perfil/curriculo.
 - Se algo seria bom para a vaga mas nao aparece no perfil, inclua em "evidencias_ausentes" ou "avisos_honestidade".

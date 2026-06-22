@@ -28,7 +28,8 @@ class AtsSimulation:
 
 
 _PROMPT = """
-Voce e um especialista em ATS e recrutamento tecnico.
+Voce e um especialista senior em ATS, parsing de curriculos e recrutamento tecnico.
+Analise como alguem que conhece filtros automaticos, triagem humana e falsos positivos.
 
 ## TEXTO BRUTO EXTRAIDO DO CURRICULO
 {resume_text}
@@ -53,6 +54,7 @@ Retorne SOMENTE JSON valido, sem markdown e sem texto extra:
 }}
 
 ## REGRAS
+- Pense como senior: conte apenas evidencias textuais claras, diferencie match real de palavra solta e seja conservador.
 - Nao conte como presente uma keyword que nao aparece no curriculo ou que aparece de forma ambigua.
 - Agrupe variacoes obvias, como "PostgreSQL" e "Postgres".
 - Foque em tecnologias, ferramentas, metodologias, certificacoes, idiomas tecnicos e requisitos objetivos.

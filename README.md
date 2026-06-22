@@ -4,13 +4,13 @@
 
 ### Cansado de mandar curriculo no escuro?
 
-**Versao:** `0.0.9`
+**Versao:** `0.1.1`
 
 O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores matches por e-mail automaticamente, enquanto voce faz outra coisa.
 
 <br>
 
-[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.9-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.9)
+[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.1.1-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.1.1)
 
 *Gratuito · Sem instalacao · Traga suas proprias APIs*
 
@@ -34,7 +34,7 @@ Nao encontrei nada assim. Entao construi.
 
 <div align="center">
 
-### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.9)
+### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.1.1)
 
 </div>
 
@@ -52,31 +52,52 @@ Nao precisa instalar Python, Node, nem nada. So baixar e rodar.
 
 ## Interface
 
-### Painel principal
-![Painel de busca e monitoramento](assets/painel-principal.png)
+### Menu principal
+![Menu principal](assets/tela-menu.png)
 
-Configure quantas vagas analisar por varredura, defina o score minimo de compatibilidade e o intervalo entre buscas. O log mostra so eventos relevantes, sem spam.
-
----
-
-### Configuracao de credenciais
-![Tela de configuracao - credenciais e perfil](assets/configuracao-credenciais.png)
-
-Suas chaves de API e senha do Gmail sao armazenadas com **DPAPI do Windows**, nunca em texto puro no disco.
+O app abre em um menu central, com status, atalhos para todas as areas e acoes rapidas. O menu usa a tela inteira e as telas internas usam uma barra lateral simples para navegar.
 
 ---
 
-### Configuracao de perfil e filtros
-![Tela de configuracao - areas, senioridade e modalidade](assets/configuracao-filtros.png)
+### Busca
+![Tela de busca](assets/tela-busca.png)
 
-Selecione as areas, niveis de senioridade e modalidades de trabalho que fazem sentido para voce. O app so busca o que voce quer.
+Configure quantas vagas analisar por varredura, defina o score minimo, rode uma busca pontual ou deixe o monitoramento ligado. A analise das vagas agora e feita em lote para economizar chamadas de IA.
 
 ---
 
-### Filtros avancados
-![Tela de configuracao - localizacao, empresas-alvo e queries](assets/configuracao-avancada.png)
+### Analisar vaga
+![Tela de analise de vaga](assets/tela-analisar-vaga.png)
 
-Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras para afinar ainda mais a busca.
+Cole uma vaga especifica para receber score, veredito, pontos fortes, gaps e proximas acoes. Depois da analise, voce pode registrar a vaga em **Candidaturas**.
+
+---
+
+### Otimizar curriculo
+![Tela de otimizacao de curriculo](assets/tela-otimizar-curriculo.png)
+
+Gera orientacoes para direcionar o curriculo a uma vaga sem inventar experiencia, tecnologia ou senioridade.
+
+---
+
+### Candidaturas
+![Tela de candidaturas](assets/tela-candidaturas.png)
+
+Acompanhe o funil das vagas registradas, salve contato, notas, proxima acao e acompanhe metricas simples.
+
+---
+
+### Mercado
+![Tela de mercado](assets/tela-mercado.png)
+
+Transforma o historico de vagas encontradas em leitura de tendencias: tecnologias, senioridade, modalidade, empresas e lacunas.
+
+---
+
+### Relatorios
+![Tela de relatorios](assets/tela-relatorios.png)
+
+Mostra o historico local de varreduras, analises, otimizacoes, ATS, cartas e relatorios de mercado, abrindo HTML no navegador.
 
 ---
 
@@ -84,8 +105,11 @@ Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras
 
 - Busca vagas no Google usando os termos e filtros que voce configurar.
 - Le e filtra o conteudo real das paginas de vaga.
-- Calcula um **score de compatibilidade** entre a vaga e o seu curriculo/perfil usando IA.
+- Calcula um **score de compatibilidade** entre cada vaga e o seu curriculo/perfil usando IA.
+- Analisa as vagas da varredura em lote, com uma chamada de IA para varias vagas, reduzindo custo e saida de tokens.
+- Usa prompts com criterio senior para vaga, curriculo, ATS, carta e otimizacao.
 - Manda os melhores matches por **e-mail automaticamente** no intervalo definido.
+- Tem um **Menu principal** em tela cheia e uma barra lateral simples nas telas internas.
 - Analisa uma vaga colada manualmente na aba **Analisar vaga**.
 - Simula a leitura ATS do curriculo em PDF para uma vaga especifica.
 - Gera carta de apresentacao contextualizada para uma vaga especifica.
@@ -111,6 +135,17 @@ Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras
 A analise manual nao cria um novo curriculo. Ela apenas explica o que melhorar, destacar, reduzir ou verificar no curriculo atual.
 
 A otimizacao de curriculo sugere headline, resumo, skills e bullets com base no perfil existente. Ela nao inventa experiencias e ainda nao exporta DOCX/PDF.
+
+---
+
+## Novidades da versao 0.1.1
+
+- Redesign do app com **Menu principal** em tela cheia.
+- Sidebar interna mais limpa para navegar entre as telas principais.
+- Janela de configuracao maior e redimensionavel.
+- Prints novos das 7 telas principais no README.
+- IA refinada para agir como analista senior em vagas, curriculo, ATS, cartas e otimizacao.
+- Varredura com **analise em lote**: o app busca as vagas primeiro e depois faz uma chamada de IA para avaliar varias vagas, mantendo uma porcentagem individual para cada uma.
 
 ---
 
@@ -162,10 +197,13 @@ Voce configura os termos de busca e filtros
    App le o conteudo real de cada vaga
               |
               v
-  IA compara vaga x curriculo x perfil
+  IA compara todas as vagas novas x curriculo x perfil em lote
               |
               v
-   Score calculado -> abaixo do minimo, descarta
+   Cada vaga recebe sua propria porcentagem de compatibilidade
+              |
+              v
+   Abaixo do minimo, descarta do e-mail
               |
               v
   Melhores matches enviados por Gmail com analise
@@ -296,7 +334,7 @@ job-matcher/
 
 ---
 
-## Limitacoes conhecidas (v0.0.9)
+## Limitacoes conhecidas (v0.1.1)
 
 - Monitoramento continuo exige que o app fique aberto e o computador ligado.
 - Cache local: se deletar `job_cache.json`, vagas antigas podem reaparecer antes do bloqueio de 30 dias.

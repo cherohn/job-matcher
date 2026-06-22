@@ -21,7 +21,7 @@ from scrapers.vagas_scraper import fetch_vagas_jobs
 from scrapers.linkedin_scraper import fetch_linkedin_jobs
 from scrapers.google_scraper import fetch_google_jobs
 from core.job_analyzer import SingleJobAnalysis
-from core.matcher import calculate_match
+from core.matcher import calculate_match, calculate_matches_batch
 from core.resume_optimizer import optimize_resume_for_job
 from core.ats_simulator import simulate_ats_for_job
 from core.cover_letter import create_cover_letter_for_job
@@ -335,27 +335,54 @@ def run_scan(max_jobs_override=None, should_stop=None):
     notificadas = 0
     analyzed_records = []
     matched_alerts = []
+    jobs_to_analyze = []
     for job in novas:
         if should_stop and should_stop():
             log.info("Varredura interrompida antes de analisar a proxima vaga.")
             break
 
-        log.info(f"Analisando: [{job.source}] {job.title} @ {job.company}")
-
         if not job.description or len(job.description) < 50:
             log.warning("  → Descrição insuficiente, pulando")
             mark_seen(job.id, score=0, job=job)
             continue
+        jobs_to_analyze.append(job)
 
-        result = calculate_match(
-            profile_text=PROFILE,
-            job_title=job.title,
-            job_company=job.company,
-            job_description=job.description,
-            groq_api_key=GROQ_API_KEY,
-            model_name=GROQ_MODEL,
-            use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
-        )
+    if not jobs_to_analyze:
+        log.info("Nenhuma vaga com descricao suficiente para analise.")
+        return
+
+    if should_stop and should_stop():
+        log.info("Varredura interrompida antes da analise de compatibilidade.")
+        return
+
+    log.info(f"Analisando compatibilidade de {len(jobs_to_analyze)} vaga(s) em uma unica chamada de IA.")
+    batch_results = calculate_matches_batch(
+        profile_text=PROFILE,
+        jobs=jobs_to_analyze,
+        groq_api_key=GROQ_API_KEY,
+        model_name=GROQ_MODEL,
+        use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
+    )
+
+    for job in jobs_to_analyze:
+        if should_stop and should_stop():
+            log.info("Varredura interrompida ao processar resultados da analise.")
+            break
+
+        log.info(f"Resultado: [{job.source}] {job.title} @ {job.company}")
+        result = batch_results.get(str(job.id))
+
+        if result is None:
+            log.error("Falha no match em lote, tentando analise individual.")
+            result = calculate_match(
+                profile_text=PROFILE,
+                job_title=job.title,
+                job_company=job.company,
+                job_description=job.description,
+                groq_api_key=GROQ_API_KEY,
+                model_name=GROQ_MODEL,
+                use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
+            )
 
         if result is None:
             log.error("  → Falha no match, pulando")
@@ -406,8 +433,6 @@ def run_scan(max_jobs_override=None, should_stop=None):
                 log.info("  → E-mail enviado!")
             else:
                 log.error("  → Falha no envio")
-
-        time.sleep(2)  # respeita rate limit da IA
 
     report_json = None
     report_md = None
