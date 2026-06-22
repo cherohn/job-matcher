@@ -21,6 +21,8 @@ $env:TK_LIBRARY = Join-Path $pythonTcl "tk8.6"
     --name "JobMatcherApp" `
     --icon "assets\jobmatcher.ico" `
     --collect-data "customtkinter" `
+    --collect-all "pymupdf" `
+    --collect-all "fitz" `
     --hidden-import "darkdetect" `
     --hidden-import "tkinter" `
     --hidden-import "_tkinter" `

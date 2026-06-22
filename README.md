@@ -4,13 +4,13 @@
 
 ### Cansado de mandar curriculo no escuro?
 
-**Versao:** `0.0.5`
+**Versao:** `0.0.6`
 
 O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores matches por e-mail automaticamente, enquanto voce faz outra coisa.
 
 <br>
 
-[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.5-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.5)
+[![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.0.6-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.0.6)
 
 *Gratuito · Sem instalacao · Traga suas proprias APIs*
 
@@ -34,7 +34,7 @@ Nao encontrei nada assim. Entao construi.
 
 <div align="center">
 
-### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.5)
+### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.0.6)
 
 </div>
 
@@ -87,11 +87,13 @@ Filtros de localizacao aceitos, empresas-alvo opcionais e queries manuais extras
 - Calcula um **score de compatibilidade** entre a vaga e o seu curriculo/perfil usando IA.
 - Manda os melhores matches por **e-mail automaticamente** no intervalo definido.
 - Analisa uma vaga colada manualmente na aba **Analisar vaga**.
+- Simula a leitura ATS do curriculo em PDF para uma vaga especifica.
 - Salva analises manuais em JSON e Markdown dentro de `reports/`.
 - Otimiza o direcionamento do curriculo para uma vaga especifica na aba **Otimizar curriculo**.
 - Reaproveita uma vaga analisada para otimizar o curriculo sem colar a descricao novamente.
 - Mostra historico local de relatorios dentro do app.
 - Abre relatorios em HTML no navegador com visual escuro na paleta Iron.
+- Gera relatorios ATS em HTML com score, risco, keywords presentes e ausentes.
 - Inclui testes rapidos de IA, Serper e Gmail na configuracao.
 - Salva otimizacoes de curriculo em JSON e Markdown dentro de `reports/`.
 - Gera uma **analise honesta por vaga**:
@@ -254,7 +256,7 @@ job-matcher/
 
 ---
 
-## Limitacoes conhecidas (v0.0.5)
+## Limitacoes conhecidas (v0.0.6)
 
 - Monitoramento continuo exige que o app fique aberto e o computador ligado.
 - Cache local: se deletar `job_cache.json`, vagas antigas podem reaparecer antes do bloqueio de 30 dias.

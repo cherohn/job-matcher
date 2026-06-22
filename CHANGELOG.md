@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.6
+
+- Added the ATS simulator from the manual job analysis tab.
+- Extracts raw resume text from PDF files with PyMuPDF and warns about ATS readability issues.
+- Generates Iron-themed ATS HTML reports with score, risk, diagnosis, present keywords, missing keywords, and PDF format warnings.
+- Adds ATS reports to the local reports history.
+- Opens the desktop app maximized by default.
+
 ## 0.0.5
 
 - Added Iron-themed HTML reports for scans, manual job analyses, and resume optimizations.

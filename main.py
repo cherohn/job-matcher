@@ -23,6 +23,7 @@ from scrapers.google_scraper import fetch_google_jobs
 from core.job_analyzer import SingleJobAnalysis
 from core.matcher import calculate_match
 from core.resume_optimizer import optimize_resume_for_job
+from core.ats_simulator import simulate_ats_for_job
 from core.query_builder import build_search_queries
 from core.resume_parser import build_profile
 from core.user_config import is_configured, load_user_config
@@ -145,6 +146,24 @@ def analyze_manual_job(job_title, job_company, job_description):
         model_name=GROQ_MODEL,
         use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
     )
+    if result is None:
+        return None
+
+    return SingleJobAnalysis(
+        score=result.score,
+        veredito=result.resumo,
+        pontos_fortes=result.pontos_fortes,
+        pontos_fracos=result.gaps,
+        melhorias_curriculo=result.curriculo_ajustes,
+        itens_menos_relevantes=[
+            "Informacoes que nao reforcam os requisitos principais desta vaga podem receber menos destaque.",
+            "Priorize no topo do curriculo os pontos listados em foco e pontos fortes.",
+        ],
+        prioridade_ajuste="alta" if result.score < 70 else "media" if result.score < 85 else "baixa",
+        proxima_acao=(
+            "Ajustar o resumo e os primeiros bullets do curriculo usando os pontos fortes e ajustes honestos acima."
+        ),
+    )
 
 def optimize_manual_resume(job_title, job_company, job_description):
     refresh_runtime_settings()
@@ -166,23 +185,25 @@ def optimize_manual_resume(job_title, job_company, job_description):
         model_name=GROQ_MODEL,
         use_local_fallback=getattr(settings, "USE_LOCAL_MATCH_FALLBACK", True),
     )
-    if result is None:
-        return None
 
-    return SingleJobAnalysis(
-        score=result.score,
-        veredito=result.resumo,
-        pontos_fortes=result.pontos_fortes,
-        pontos_fracos=result.gaps,
-        melhorias_curriculo=result.curriculo_ajustes,
-        itens_menos_relevantes=[
-            "Informacoes que nao reforcam os requisitos principais desta vaga podem receber menos destaque.",
-            "Priorize no topo do curriculo os pontos listados em foco e pontos fortes.",
-        ],
-        prioridade_ajuste="alta" if result.score < 70 else "media" if result.score < 85 else "baixa",
-        proxima_acao=(
-            "Ajustar o resumo e os primeiros bullets do curriculo usando os pontos fortes e ajustes honestos acima."
-        ),
+def simulate_manual_ats(job_title, job_company, job_description):
+    refresh_runtime_settings()
+    if not GROQ_API_KEY:
+        raise ValueError("Configure a API da IA antes de simular ATS.")
+    resume_path = getattr(settings, "RESUME_PDF_PATH", None)
+    if not resume_path:
+        raise ValueError("Configure um curriculo PDF antes de simular ATS.")
+    if not job_description or len(job_description.strip()) < 80:
+        raise ValueError("Cole uma descricao de vaga mais completa antes de simular ATS.")
+
+    return simulate_ats_for_job(
+        resume_pdf_path=resume_path,
+        job_title=job_title,
+        job_company=job_company,
+        job_description=job_description,
+        groq_api_key=GROQ_API_KEY,
+        model_name=GROQ_MODEL,
+        open_browser=True,
     )
 
 def run_scan(max_jobs_override=None, should_stop=None):

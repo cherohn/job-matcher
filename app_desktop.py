@@ -114,6 +114,7 @@ class JobMatcherApp(ctk.CTk):
         self.title("Job Matcher")
         self.geometry("1170x770")
         self.minsize(1030, 670)
+        self.after(0, self._maximize_window)
 
         self.messages = queue.Queue()
         self.stop_event = threading.Event()
@@ -129,6 +130,7 @@ class JobMatcherApp(ctk.CTk):
         self.analysis_title = tk.StringVar()
         self.analysis_company = tk.StringVar()
         self.analysis_worker = None
+        self.ats_worker = None
         self.last_analysis_text = ""
         self.last_job_context = None
         self.optimization_status = tk.StringVar(value="Cole uma vaga e gere uma otimizacao.")
@@ -160,6 +162,15 @@ class JobMatcherApp(ctk.CTk):
         except tk.TclError:
             pass
         self._apply_dark_title_bar(self)
+
+    def _maximize_window(self):
+        try:
+            self.state("zoomed")
+        except tk.TclError:
+            try:
+                self.attributes("-zoomed", True)
+            except tk.TclError:
+                pass
 
     def _apply_dark_title_bar(self, window):
         if sys.platform != "win32":
@@ -484,7 +495,7 @@ class JobMatcherApp(ctk.CTk):
 
         actions = ctk.CTkFrame(form, fg_color="transparent")
         actions.grid(row=4, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
-        actions.grid_columnconfigure((0, 1, 2, 3), weight=1)
+        actions.grid_columnconfigure((0, 1, 2, 3, 4), weight=1)
         self.analyze_button = ctk.CTkButton(
             actions,
             text="Analisar compatibilidade",
@@ -496,6 +507,19 @@ class JobMatcherApp(ctk.CTk):
             command=self.analyze_single_job,
         )
         self.analyze_button.grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        self.ats_button = ctk.CTkButton(
+            actions,
+            text="Simular ATS",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            command=self.simulate_ats,
+        )
+        self.ats_button.grid(row=0, column=1, sticky="ew", padx=(0, 8))
         ctk.CTkButton(
             actions,
             text="Copiar analise",
@@ -507,7 +531,7 @@ class JobMatcherApp(ctk.CTk):
             border_width=1,
             border_color=SURFACE_2,
             command=self.copy_analysis,
-        ).grid(row=0, column=1, sticky="ew", padx=(0, 8))
+        ).grid(row=0, column=2, sticky="ew", padx=(0, 8))
         self.analysis_optimize_button = ctk.CTkButton(
             actions,
             text="Otimizar esta vaga",
@@ -521,7 +545,7 @@ class JobMatcherApp(ctk.CTk):
             state="disabled",
             command=self.use_last_analyzed_job,
         )
-        self.analysis_optimize_button.grid(row=0, column=2, sticky="ew", padx=(0, 8))
+        self.analysis_optimize_button.grid(row=0, column=3, sticky="ew", padx=(0, 8))
         ctk.CTkButton(
             actions,
             text="Limpar",
@@ -533,7 +557,7 @@ class JobMatcherApp(ctk.CTk):
             border_width=1,
             border_color=SURFACE_2,
             command=self.clear_analysis,
-        ).grid(row=0, column=3, sticky="ew")
+        ).grid(row=0, column=4, sticky="ew")
 
         result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
         result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
@@ -1231,6 +1255,25 @@ class JobMatcherApp(ctk.CTk):
         )
         self.analysis_worker.start()
 
+    def simulate_ats(self):
+        if self.ats_worker and self.ats_worker.is_alive():
+            messagebox.showinfo("Job Matcher", "A simulacao ATS atual ainda esta em execucao.")
+            return
+
+        description = self.analysis_description.get("1.0", "end").strip()
+        if len(description) < 80:
+            messagebox.showinfo("Job Matcher", "Cole uma descricao de vaga mais completa antes de simular ATS.")
+            return
+
+        self.analysis_status.set("Simulando leitura ATS do curriculo...")
+        self.ats_button.configure(state="disabled", text="Simulando...")
+        self.ats_worker = threading.Thread(
+            target=self._ats_worker,
+            args=(self.analysis_title.get().strip(), self.analysis_company.get().strip(), description),
+            daemon=True,
+        )
+        self.ats_worker.start()
+
     def clear_analysis(self):
         self.analysis_title.set("")
         self.analysis_company.set("")
@@ -1399,6 +1442,19 @@ class JobMatcherApp(ctk.CTk):
         finally:
             self.after(0, lambda: self.analyze_button.configure(state="normal", text="Analisar compatibilidade"))
 
+    def _ats_worker(self, title, company, description):
+        try:
+            result = engine.simulate_manual_ats(title, company, description)
+            output = self._format_ats_result(title, company, result)
+            self.after(0, self._set_analysis_result, output)
+            self.after(0, self.analysis_status.set, f"Simulacao ATS salva em {result.html_path}.")
+            self.after(0, self.refresh_reports)
+        except Exception as exc:
+            self.after(0, messagebox.showerror, "Job Matcher", str(exc))
+            self.after(0, self.analysis_status.set, "Nao foi possivel simular ATS para esta vaga.")
+        finally:
+            self.after(0, lambda: self.ats_button.configure(state="normal", text="Simular ATS"))
+
     def _optimization_worker(self, title, company, description):
         try:
             result = engine.optimize_manual_resume(title, company, description)
@@ -1440,6 +1496,24 @@ class JobMatcherApp(ctk.CTk):
         if report_path:
             lines.append("Relatorio salvo")
             lines.append(f"- {report_path}")
+        return "\n".join(lines).strip() + "\n"
+
+    def _format_ats_result(self, title, company, result):
+        lines = []
+        heading = title or "Vaga analisada"
+        if company:
+            heading = f"{heading} @ {company}"
+        lines.append(f"Simulacao ATS - {heading}")
+        lines.append("")
+        lines.append(f"Score de cobertura: {result.coverage_score}%")
+        lines.append(f"Risco: {result.risk}")
+        lines.append(f"Diagnostico: {result.diagnostico}")
+        lines.append("")
+        self._append_section(lines, "Keywords presentes", result.keywords_presentes)
+        self._append_section(lines, "Keywords ausentes", result.keywords_ausentes)
+        self._append_section(lines, "Avisos de formato do PDF", result.avisos_pdf)
+        lines.append("Relatorio HTML")
+        lines.append(f"- {result.html_path}")
         return "\n".join(lines).strip() + "\n"
 
     def _append_section(self, lines, title, items):
