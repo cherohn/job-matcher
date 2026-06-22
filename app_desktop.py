@@ -19,6 +19,15 @@ from PIL import Image
 
 import main as engine
 from core.report import REPORT_DIR, list_report_summaries, save_manual_analysis_report, save_resume_optimization_report
+from core.tracker import (
+    STATUS_LABELS,
+    STATUS_ORDER,
+    calculate_metrics,
+    get_follow_up_alerts,
+    load_applications,
+    register_application,
+    update_application,
+)
 from core.user_config import get_config_path, import_user_file, load_user_config, save_user_config
 
 
@@ -139,6 +148,8 @@ class JobMatcherApp(ctk.CTk):
         self.optimization_company = tk.StringVar()
         self.optimization_worker = None
         self.last_optimization_text = ""
+        self.selected_application_id = None
+        self.tracker_cards = {}
         self.report_rows = []
         self.nav_buttons = {}
         self.tab_frames = {}
@@ -147,6 +158,7 @@ class JobMatcherApp(ctk.CTk):
         self._set_window_icon()
         self._configure_logging()
         self._build_layout()
+        self._log_follow_up_alerts()
         self._refresh_log()
 
         self.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -211,6 +223,15 @@ class JobMatcherApp(ctk.CTk):
         handler = QueueLogHandler(self.messages)
         logging.getLogger().addHandler(handler)
         logging.getLogger().setLevel(logging.INFO)
+
+    def _log_follow_up_alerts(self):
+        alerts = get_follow_up_alerts()
+        if not alerts:
+            return
+        names = "; ".join(f"{item.get('cargo')} @ {item.get('empresa')}" for item in alerts[:4])
+        if len(alerts) > 4:
+            names += f"; +{len(alerts) - 4}"
+        logging.warning("Follow-up pendente em candidaturas: %s", names)
 
     def _build_layout(self):
         self.grid_columnconfigure(1, weight=1)
@@ -286,11 +307,12 @@ class JobMatcherApp(ctk.CTk):
 
         nav = ctk.CTkFrame(shell, fg_color="transparent")
         nav.grid(row=0, column=0, padx=26, pady=(0, 14), sticky="ew")
-        nav.grid_columnconfigure(4, weight=1)
+        nav.grid_columnconfigure(5, weight=1)
         self._nav_button(nav, 0, "Busca")
         self._nav_button(nav, 1, "Analisar vaga")
         self._nav_button(nav, 2, "Otimizar curriculo")
-        self._nav_button(nav, 3, "Relatorios")
+        self._nav_button(nav, 3, "Candidaturas")
+        self._nav_button(nav, 4, "Relatorios")
 
         tab_area = ctk.CTkFrame(shell, fg_color=BG, corner_radius=0)
         tab_area.grid(row=1, column=0, sticky="nsew")
@@ -300,11 +322,13 @@ class JobMatcherApp(ctk.CTk):
         search_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         analysis_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         optimization_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
+        tracker_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         reports_tab = ctk.CTkFrame(tab_area, fg_color=BG, corner_radius=0)
         self.tab_frames = {
             "Busca": search_tab,
             "Analisar vaga": analysis_tab,
             "Otimizar curriculo": optimization_tab,
+            "Candidaturas": tracker_tab,
             "Relatorios": reports_tab,
         }
 
@@ -388,6 +412,7 @@ class JobMatcherApp(ctk.CTk):
 
         self._build_analysis_tab(analysis_tab)
         self._build_optimization_tab(optimization_tab)
+        self._build_tracker_tab(tracker_tab)
         self._build_reports_tab(reports_tab)
         self._show_tab("Busca")
 
@@ -396,7 +421,7 @@ class JobMatcherApp(ctk.CTk):
             parent,
             text=name,
             height=38,
-            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 100 if name == "Relatorios" else 86,
+            width=156 if name == "Otimizar curriculo" else 132 if name == "Analisar vaga" else 126 if name == "Candidaturas" else 100 if name == "Relatorios" else 86,
             corner_radius=8,
             fg_color=SURFACE,
             hover_color=SURFACE_2,
@@ -415,6 +440,8 @@ class JobMatcherApp(ctk.CTk):
         self.tab_frames[name].grid(row=0, column=0, sticky="nsew")
         if name == "Relatorios":
             self.refresh_reports()
+        if name == "Candidaturas":
+            self.refresh_tracker()
         self.current_tab = name
 
         for tab_name, button in self.nav_buttons.items():
@@ -496,7 +523,7 @@ class JobMatcherApp(ctk.CTk):
 
         actions = ctk.CTkFrame(form, fg_color="transparent")
         actions.grid(row=4, column=0, columnspan=2, padx=18, pady=(0, 18), sticky="ew")
-        actions.grid_columnconfigure((0, 1, 2, 3, 4, 5), weight=1)
+        actions.grid_columnconfigure((0, 1, 2, 3, 4, 5, 6), weight=1)
         self.analyze_button = ctk.CTkButton(
             actions,
             text="Analisar compatibilidade",
@@ -534,6 +561,20 @@ class JobMatcherApp(ctk.CTk):
             command=self.generate_cover_letter,
         )
         self.cover_letter_button.grid(row=0, column=2, sticky="ew", padx=(0, 8))
+        self.register_application_button = ctk.CTkButton(
+            actions,
+            text="Registrar",
+            height=38,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=SURFACE_2,
+            state="disabled",
+            command=self.register_last_application,
+        )
+        self.register_application_button.grid(row=0, column=3, sticky="ew", padx=(0, 8))
         ctk.CTkButton(
             actions,
             text="Copiar analise",
@@ -545,7 +586,7 @@ class JobMatcherApp(ctk.CTk):
             border_width=1,
             border_color=SURFACE_2,
             command=self.copy_analysis,
-        ).grid(row=0, column=3, sticky="ew", padx=(0, 8))
+        ).grid(row=0, column=4, sticky="ew", padx=(0, 8))
         self.analysis_optimize_button = ctk.CTkButton(
             actions,
             text="Otimizar esta vaga",
@@ -559,7 +600,7 @@ class JobMatcherApp(ctk.CTk):
             state="disabled",
             command=self.use_last_analyzed_job,
         )
-        self.analysis_optimize_button.grid(row=0, column=4, sticky="ew", padx=(0, 8))
+        self.analysis_optimize_button.grid(row=0, column=5, sticky="ew", padx=(0, 8))
         ctk.CTkButton(
             actions,
             text="Limpar",
@@ -571,7 +612,7 @@ class JobMatcherApp(ctk.CTk):
             border_width=1,
             border_color=SURFACE_2,
             command=self.clear_analysis,
-        ).grid(row=0, column=5, sticky="ew")
+        ).grid(row=0, column=6, sticky="ew")
 
         result_panel = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
         result_panel.grid(row=1, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
@@ -767,6 +808,136 @@ class JobMatcherApp(ctk.CTk):
             "O app vai sugerir headline, resumo, skills, bullets e alertas de honestidade.\n",
         )
         self.optimization_result_box.configure(state="disabled")
+
+    def _build_tracker_tab(self, parent):
+        parent.configure(fg_color=BG)
+        parent.grid_columnconfigure(0, weight=1)
+        parent.grid_columnconfigure(1, weight=0, minsize=320)
+        parent.grid_rowconfigure(2, weight=1)
+
+        header = ctk.CTkFrame(parent, fg_color="transparent")
+        header.grid(row=0, column=0, columnspan=2, padx=26, pady=(26, 16), sticky="ew")
+        header.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            header,
+            text="Candidaturas",
+            font=("Segoe UI", 26, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, sticky="w")
+        ctk.CTkLabel(
+            header,
+            text="Acompanhe o funil, mova vagas entre etapas e registre proximas acoes.",
+            font=("Segoe UI", 13),
+            text_color=MUTED,
+        ).grid(row=1, column=0, pady=(6, 0), sticky="w")
+        ctk.CTkButton(
+            header,
+            text="Atualizar",
+            width=110,
+            height=36,
+            corner_radius=8,
+            fg_color=SURFACE,
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            border_width=1,
+            border_color=BORDER,
+            command=self.refresh_tracker,
+        ).grid(row=0, column=1, rowspan=2, sticky="e")
+
+        self.tracker_metrics = ctk.CTkFrame(parent, fg_color="transparent")
+        self.tracker_metrics.grid(row=1, column=0, columnspan=2, padx=26, pady=(0, 14), sticky="ew")
+        self.tracker_metrics.grid_columnconfigure((0, 1, 2, 3), weight=1)
+
+        self.tracker_board = ctk.CTkFrame(parent, fg_color="transparent")
+        self.tracker_board.grid(row=2, column=0, padx=(26, 10), pady=(0, 24), sticky="nsew")
+        self.tracker_board.grid_columnconfigure(tuple(range(len(STATUS_ORDER))), weight=1)
+        self.tracker_board.grid_rowconfigure(1, weight=1)
+        self.tracker_columns = {}
+        for index, status in enumerate(STATUS_ORDER):
+            ctk.CTkLabel(
+                self.tracker_board,
+                text=STATUS_LABELS[status],
+                font=("Segoe UI", 14, "bold"),
+                text_color=TEXT,
+            ).grid(row=0, column=index, sticky="w", padx=(0 if index == 0 else 8, 0), pady=(0, 8))
+            column = ctk.CTkScrollableFrame(
+                self.tracker_board,
+                fg_color=BASE,
+                corner_radius=8,
+                border_width=1,
+                border_color=BORDER,
+            )
+            column.grid(row=1, column=index, sticky="nsew", padx=(0 if index == 0 else 8, 0))
+            self.tracker_columns[status] = column
+
+        self.tracker_detail = ctk.CTkFrame(parent, fg_color=BASE, corner_radius=10, border_width=1, border_color=BORDER)
+        self.tracker_detail.grid(row=2, column=1, padx=(10, 26), pady=(0, 24), sticky="nsew")
+        self.tracker_detail.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(
+            self.tracker_detail,
+            text="Detalhes",
+            font=("Segoe UI", 17, "bold"),
+            text_color=TEXT,
+        ).grid(row=0, column=0, padx=18, pady=(18, 4), sticky="w")
+        self.tracker_detail_title = ctk.CTkLabel(
+            self.tracker_detail,
+            text="Selecione uma candidatura.",
+            font=("Segoe UI", 12),
+            text_color=MUTED,
+            wraplength=280,
+            justify="left",
+        )
+        self.tracker_detail_title.grid(row=1, column=0, padx=18, pady=(0, 12), sticky="ew")
+
+        self.tracker_contact = tk.StringVar()
+        self.tracker_next_action = tk.StringVar()
+        self._tracker_entry("Contato", self.tracker_contact, 2)
+        self._tracker_entry("Proxima acao", self.tracker_next_action, 3)
+        ctk.CTkLabel(self.tracker_detail, text="Notas", text_color=MUTED, font=("Segoe UI", 12)).grid(row=4, column=0, padx=18, sticky="w")
+        self.tracker_notes = ctk.CTkTextbox(
+            self.tracker_detail,
+            height=120,
+            corner_radius=7,
+            fg_color=BG,
+            border_width=1,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 12),
+            wrap="word",
+        )
+        self.tracker_notes.grid(row=5, column=0, padx=18, pady=(6, 12), sticky="ew")
+
+        ctk.CTkButton(
+            self.tracker_detail,
+            text="Salvar detalhes",
+            height=36,
+            corner_radius=8,
+            fg_color=ACCENT,
+            hover_color=ACCENT_DIM,
+            text_color=BG,
+            command=self.save_tracker_details,
+        ).grid(row=6, column=0, padx=18, pady=(0, 12), sticky="ew")
+
+        self.tracker_move_frame = ctk.CTkFrame(self.tracker_detail, fg_color="transparent")
+        self.tracker_move_frame.grid(row=7, column=0, padx=18, pady=(0, 18), sticky="ew")
+        self.tracker_move_frame.grid_columnconfigure(0, weight=1)
+        self.refresh_tracker()
+
+    def _tracker_entry(self, label, variable, row):
+        frame = ctk.CTkFrame(self.tracker_detail, fg_color="transparent")
+        frame.grid(row=row, column=0, padx=18, pady=(0, 10), sticky="ew")
+        frame.grid_columnconfigure(0, weight=1)
+        ctk.CTkLabel(frame, text=label, text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w")
+        ctk.CTkEntry(
+            frame,
+            textvariable=variable,
+            height=34,
+            corner_radius=7,
+            fg_color=BG,
+            border_color=BORDER,
+            text_color=TEXT,
+            font=("Segoe UI", 12),
+        ).grid(row=1, column=0, sticky="ew", pady=(6, 0))
 
     def _build_reports_tab(self, parent):
         parent.configure(fg_color=BG)
@@ -1315,6 +1486,8 @@ class JobMatcherApp(ctk.CTk):
         self.last_job_context = None
         if hasattr(self, "analysis_optimize_button"):
             self.analysis_optimize_button.configure(state="disabled")
+        if hasattr(self, "register_application_button"):
+            self.register_application_button.configure(state="disabled")
         self.analysis_status.set("Cole uma vaga e clique em Analisar.")
         self._set_analysis_result(
             "A analise vai aparecer aqui.\n\n"
@@ -1339,6 +1512,25 @@ class JobMatcherApp(ctk.CTk):
         self.optimization_description.insert("1.0", self.last_job_context.get("description", ""))
         self.optimization_status.set("Vaga analisada carregada. Clique em Gerar otimizacao.")
         self._show_tab("Otimizar curriculo")
+
+    def register_last_application(self):
+        if not self.last_job_context:
+            messagebox.showinfo("Job Matcher", "Analise uma vaga antes de registrar candidatura.")
+            return
+        app_id, created = register_application(
+            title=self.last_job_context.get("title", ""),
+            company=self.last_job_context.get("company", ""),
+            url=self.last_job_context.get("url", ""),
+            score_fit=self.last_job_context.get("score"),
+            source=self.last_job_context.get("source", "Manual"),
+        )
+        if created:
+            self.analysis_status.set("Candidatura registrada na aba Candidaturas.")
+        else:
+            self.analysis_status.set("Essa candidatura ja estava registrada.")
+        self.selected_application_id = app_id
+        self.refresh_tracker()
+        self._show_tab("Candidaturas")
 
     def optimize_resume(self):
         if self.optimization_worker and self.optimization_worker.is_alive():
@@ -1383,6 +1575,151 @@ class JobMatcherApp(ctk.CTk):
         path.mkdir(parents=True, exist_ok=True)
         logging.info("Abrindo pasta de relatorios: %s", path)
         os.startfile(str(path))
+
+    def refresh_tracker(self):
+        if not hasattr(self, "tracker_columns"):
+            return
+
+        applications = load_applications()
+        metrics = calculate_metrics(applications)
+        alerts = get_follow_up_alerts()
+
+        for child in self.tracker_metrics.winfo_children():
+            child.destroy()
+        metric_items = [
+            ("Total", metrics["total"]),
+            ("Responderam", metrics["respondidas"]),
+            ("Entrevista", f"{metrics['taxa_entrevista']}%"),
+            ("Media resposta", f"{metrics['tempo_medio_resposta']}d"),
+        ]
+        for index, (label, value) in enumerate(metric_items):
+            card = ctk.CTkFrame(self.tracker_metrics, fg_color=BASE, corner_radius=8, border_width=1, border_color=BORDER)
+            card.grid(row=0, column=index, sticky="ew", padx=(0 if index == 0 else 8, 0))
+            ctk.CTkLabel(card, text=label, text_color=MUTED, font=("Segoe UI", 12)).pack(anchor="w", padx=14, pady=(10, 2))
+            ctk.CTkLabel(card, text=str(value), text_color=ACCENT, font=("Segoe UI", 20, "bold")).pack(anchor="w", padx=14, pady=(0, 10))
+        if alerts:
+            names = "; ".join(f"{item.get('cargo')} @ {item.get('empresa')}" for item in alerts[:4])
+            if len(alerts) > 4:
+                names += f"; +{len(alerts) - 4}"
+            banner = ctk.CTkFrame(self.tracker_metrics, fg_color="#3A2D14", corner_radius=8, border_width=1, border_color=ACCENT_DIM)
+            banner.grid(row=1, column=0, columnspan=4, sticky="ew", pady=(10, 0))
+            ctk.CTkLabel(
+                banner,
+                text=f"Follow-up pendente: {names}",
+                text_color="#F1D38B",
+                font=("Segoe UI", 12, "bold"),
+                wraplength=900,
+                justify="left",
+            ).pack(anchor="w", padx=14, pady=10)
+
+        for column in self.tracker_columns.values():
+            for child in column.winfo_children():
+                child.destroy()
+        grouped = {status: [] for status in STATUS_ORDER}
+        for app_id, item in applications.items():
+            grouped.setdefault(item.get("status", "enviado"), []).append((app_id, item))
+        for status in STATUS_ORDER:
+            items = sorted(grouped.get(status, []), key=lambda pair: pair[1].get("updated_at", ""), reverse=True)
+            if not items:
+                ctk.CTkLabel(
+                    self.tracker_columns[status],
+                    text="Sem candidaturas.",
+                    text_color=MUTED,
+                    font=("Segoe UI", 12),
+                ).pack(anchor="w", padx=10, pady=10)
+                continue
+            for app_id, item in items:
+                self._tracker_card(self.tracker_columns[status], app_id, item)
+
+        if self.selected_application_id in applications:
+            self._load_tracker_detail(self.selected_application_id, applications[self.selected_application_id])
+        else:
+            self.selected_application_id = None
+            self._clear_tracker_detail()
+
+    def _tracker_card(self, parent, app_id, item):
+        selected = app_id == self.selected_application_id
+        card = ctk.CTkFrame(parent, fg_color=SURFACE_2 if selected else SURFACE, corner_radius=8, border_width=1, border_color=ACCENT if selected else BORDER)
+        card.pack(fill="x", padx=8, pady=(8, 0))
+        title = item.get("cargo", "Vaga sem titulo")
+        company = item.get("empresa", "Nao informada")
+        score = item.get("score_fit")
+        score_text = f" | {score}%" if score is not None else ""
+        button = ctk.CTkButton(
+            card,
+            text=f"{title}\n{company}{score_text}",
+            height=76,
+            corner_radius=8,
+            fg_color="transparent",
+            hover_color=SURFACE_2,
+            text_color=TEXT,
+            anchor="w",
+            font=("Segoe UI", 12, "bold"),
+            command=lambda: self.select_tracker_application(app_id),
+        )
+        button.pack(fill="x", padx=8, pady=8)
+
+    def select_tracker_application(self, app_id):
+        applications = load_applications()
+        if app_id not in applications:
+            return
+        self.selected_application_id = app_id
+        self.refresh_tracker()
+
+    def _clear_tracker_detail(self):
+        self.tracker_detail_title.configure(text="Selecione uma candidatura.")
+        self.tracker_contact.set("")
+        self.tracker_next_action.set("")
+        self.tracker_notes.delete("1.0", "end")
+        for child in self.tracker_move_frame.winfo_children():
+            child.destroy()
+
+    def _load_tracker_detail(self, app_id, item):
+        self.tracker_detail_title.configure(
+            text=f"{item.get('cargo', 'Vaga')} @ {item.get('empresa', 'Empresa')}\nStatus: {STATUS_LABELS.get(item.get('status'), item.get('status'))}"
+        )
+        self.tracker_contact.set(item.get("contato", ""))
+        self.tracker_next_action.set(item.get("proxima_acao", ""))
+        self.tracker_notes.delete("1.0", "end")
+        self.tracker_notes.insert("1.0", item.get("notas", ""))
+        for child in self.tracker_move_frame.winfo_children():
+            child.destroy()
+        ctk.CTkLabel(self.tracker_move_frame, text="Mover para", text_color=MUTED, font=("Segoe UI", 12)).grid(row=0, column=0, sticky="w", pady=(0, 6))
+        row = 1
+        current = item.get("status", "enviado")
+        for status in STATUS_ORDER:
+            if status == current:
+                continue
+            ctk.CTkButton(
+                self.tracker_move_frame,
+                text=STATUS_LABELS[status],
+                height=32,
+                corner_radius=8,
+                fg_color=SURFACE,
+                hover_color=SURFACE_2,
+                text_color=TEXT,
+                border_width=1,
+                border_color=BORDER,
+                command=lambda target=status: self.move_tracker_application(target),
+            ).grid(row=row, column=0, sticky="ew", pady=(0, 6))
+            row += 1
+
+    def save_tracker_details(self):
+        if not self.selected_application_id:
+            messagebox.showinfo("Job Matcher", "Selecione uma candidatura primeiro.")
+            return
+        update_application(self.selected_application_id, {
+            "contato": self.tracker_contact.get().strip(),
+            "proxima_acao": self.tracker_next_action.get().strip(),
+            "notas": self.tracker_notes.get("1.0", "end").strip(),
+        })
+        self.refresh_tracker()
+
+    def move_tracker_application(self, status):
+        if not self.selected_application_id:
+            return
+        update_application(self.selected_application_id, {"status": status})
+        self.refresh_tracker()
 
     def refresh_reports(self):
         if not hasattr(self, "reports_list"):
@@ -1463,10 +1800,14 @@ class JobMatcherApp(ctk.CTk):
                 "title": title,
                 "company": company,
                 "description": description,
+                "score": result.score,
+                "url": "",
+                "source": "Manual",
             }
             self.last_analysis_text = output
             self.after(0, self._set_analysis_result, output)
             self.after(0, lambda: self.analysis_optimize_button.configure(state="normal"))
+            self.after(0, lambda: self.register_application_button.configure(state="normal"))
             self.after(0, self.analysis_status.set, f"Analise salva em reports/{report_md.name}. Voce pode otimizar essa vaga na aba Otimizar curriculo.")
             self.after(0, self.refresh_reports)
         except Exception as exc:

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.0.8
+
+- Added the **Candidaturas** tab with a local kanban-style application tracker.
+- Added a **Registrar** action after manual job analysis to save an application with company, role, score, source, and date.
+- Stores applications in `%APPDATA%/JobMatcher/applications.json`.
+- Added application detail editing for contact, notes, and next action.
+- Added funnel metrics and follow-up alerts for applications waiting more than 7 days.
+
 ## 0.0.7
 
 - Added contextual cover letter generation from the manual job analysis tab.
