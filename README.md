@@ -11,6 +11,7 @@ O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores 
 <br>
 
 [![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.1.1-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.1.1)
+[![Guia do Usuario](https://img.shields.io/badge/Guia%20do%20Usuario-abrir-2C2C2C?style=for-the-badge)](GUIA_USUARIO.md)
 
 *Gratuito · Sem instalacao · Traga suas proprias APIs*
 
@@ -52,51 +53,32 @@ Nao precisa instalar Python, Node, nem nada. So baixar e rodar.
 
 ## Interface
 
-### Menu principal
-![Menu principal](assets/tela-menu.png)
+### Demonstracao do app
+![Demonstracao do Job Matcher em funcionamento](assets/jobmatcher-demo.gif)
 
+Fluxo rapido pelo menu principal, busca, analise de vaga, otimizacao de curriculo, candidaturas, mercado e relatorios.
+
+---
+
+### Menu principal
 O app abre em um menu central, com status, atalhos para todas as areas e acoes rapidas. O menu usa a tela inteira e as telas internas usam uma barra lateral simples para navegar.
 
----
-
 ### Busca
-![Tela de busca](assets/tela-busca.png)
-
 Configure quantas vagas analisar por varredura, defina o score minimo, rode uma busca pontual ou deixe o monitoramento ligado. A analise das vagas agora e feita em lote para economizar chamadas de IA.
 
----
-
 ### Analisar vaga
-![Tela de analise de vaga](assets/tela-analisar-vaga.png)
-
 Cole uma vaga especifica para receber score, veredito, pontos fortes, gaps e proximas acoes. Depois da analise, voce pode registrar a vaga em **Candidaturas**.
 
----
-
 ### Otimizar curriculo
-![Tela de otimizacao de curriculo](assets/tela-otimizar-curriculo.png)
-
 Gera orientacoes para direcionar o curriculo a uma vaga sem inventar experiencia, tecnologia ou senioridade.
 
----
-
 ### Candidaturas
-![Tela de candidaturas](assets/tela-candidaturas.png)
-
 Acompanhe o funil das vagas registradas, salve contato, notas, proxima acao e acompanhe metricas simples.
 
----
-
 ### Mercado
-![Tela de mercado](assets/tela-mercado.png)
-
 Transforma o historico de vagas encontradas em leitura de tendencias: tecnologias, senioridade, modalidade, empresas e lacunas.
 
----
-
 ### Relatorios
-![Tela de relatorios](assets/tela-relatorios.png)
-
 Mostra o historico local de varreduras, analises, otimizacoes, ATS, cartas e relatorios de mercado, abrindo HTML no navegador.
 
 ---
@@ -143,7 +125,7 @@ A otimizacao de curriculo sugere headline, resumo, skills e bullets com base no 
 - Redesign do app com **Menu principal** em tela cheia.
 - Sidebar interna mais limpa para navegar entre as telas principais.
 - Janela de configuracao maior e redimensionavel.
-- Prints novos das 7 telas principais no README.
+- GIF demonstrativo das 7 telas principais no README.
 - IA refinada para agir como analista senior em vagas, curriculo, ATS, cartas e otimizacao.
 - Varredura com **analise em lote**: o app busca as vagas primeiro e depois faz uma chamada de IA para avaliar varias vagas, mantendo uma porcentagem individual para cada uma.
 
@@ -247,7 +229,7 @@ llama-3.3-70b-versatile
 9. Clique em **Buscar agora** para testar uma vez.
 10. Clique em **Iniciar monitoramento** para monitoramento continuo.
 
-Guia completo com prints passo a passo: [GUIA_USUARIO.md](GUIA_USUARIO.md)
+Guia completo de uso e configuracao: [GUIA_USUARIO.md](GUIA_USUARIO.md)
 
 ---
 

@@ -2,6 +2,12 @@
 
 Este guia explica como instalar, configurar, usar e entender o Job Matcher.
 
+## Demonstracao visual
+
+![Demonstracao do Job Matcher em funcionamento](assets/jobmatcher-demo.gif)
+
+O GIF acima mostra o fluxo principal do app: menu, busca, analise de vaga, otimizacao de curriculo, candidaturas, mercado e relatorios.
+
 ## 1. O que o sistema faz
 
 O Job Matcher procura vagas usando Google via Serper, le as paginas encontradas, compara cada vaga com o perfil do usuario usando IA e envia por e-mail os melhores resultados.
@@ -20,8 +26,12 @@ O sistema nao cria candidatura automaticamente e nao garante contratacao. Ele aj
 
 Na interface desktop, tambem existem abas para uso manual:
 
+- `Menu principal`: mostra status, atalhos e acesso rapido as areas do app.
+- `Busca`: configura e executa varreduras de vagas.
 - `Analisar vaga`: cola uma vaga especifica e recebe um diagnostico de compatibilidade.
 - `Otimizar curriculo`: cola uma vaga especifica e recebe sugestoes de headline, resumo, skills e bullets baseadas no curriculo/perfil atual.
+- `Candidaturas`: acompanha vagas registradas, etapas, notas, contatos e proximas acoes.
+- `Mercado`: le o historico local de vagas e mostra tendencias.
 - `Relatorios`: mostra o historico local de varreduras, analises e otimizacoes.
 
 A otimizacao nao deve inventar experiencia. Ela serve para reposicionar e reescrever melhor o que ja existe.
@@ -227,6 +237,19 @@ Na aba `Otimizar curriculo`:
 4. Clique em `Gerar otimizacao`.
 5. O app sugere headline, resumo profissional, skills prioritarias, experiencias para priorizar, bullets sugeridos, itens para reduzir e avisos de honestidade.
 6. A otimizacao tambem e salva em `reports/` como JSON e Markdown.
+
+Na aba `Candidaturas`:
+
+1. Veja as vagas registradas a partir de uma analise.
+2. Atualize etapa, contato, notas e proxima acao.
+3. Acompanhe metricas simples do funil.
+4. Revise alertas de follow-up quando uma candidatura ficar parada.
+
+Na aba `Mercado`:
+
+1. Clique para gerar ou atualizar a leitura de tendencias.
+2. Veja tecnologias, senioridades, modalidades e empresas mais frequentes.
+3. Use as lacunas como apoio para ajustar curriculo e foco de estudo.
 
 Na aba `Relatorios`:
 
