@@ -13,7 +13,7 @@ O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores 
 [![Download Windows](https://img.shields.io/badge/Download%20para%20Windows-v0.1.1-FFB300?style=for-the-badge)](https://github.com/cherohn/job-matcher/releases/tag/v0.1.1)
 [![Guia do Usuario](https://img.shields.io/badge/Guia%20do%20Usuario-abrir-2C2C2C?style=for-the-badge)](GUIA_USUARIO.md)
 
-*Gratuito · Sem instalacao · Traga suas proprias APIs*
+*Gratuito · Sem instalacao · Traga suas proprias APIs*  **Requisito:** Windows 10 ou superior
 
 </div>
 
@@ -30,24 +30,6 @@ Eu queria uma ferramenta que me dissesse:
 Nao encontrei nada assim. Entao construi.
 
 ---
-
-## Download
-
-<div align="center">
-
-### [Clique aqui para baixar o Job Matcher para Windows](https://github.com/cherohn/job-matcher/releases/tag/v0.1.1)
-
-</div>
-
-```text
-1. Baixe JobMatcherApp.zip na pagina de releases
-2. Extraia o zip
-3. Execute JobMatcherApp.exe
-```
-
-Nao precisa instalar Python, Node, nem nada. So baixar e rodar.
-
-> **Requisito:** Windows 10 ou superior
 
 ---
 
@@ -130,40 +112,6 @@ A otimizacao de curriculo sugere headline, resumo, skills e bullets com base no 
 - Varredura com **analise em lote**: o app busca as vagas primeiro e depois faz uma chamada de IA para avaliar varias vagas, mantendo uma porcentagem individual para cada uma.
 
 ---
-
-## Ultimas 5 partes criadas
-
-### Parte 1 - Relatorios bonitos em HTML
-
-O app agora gera relatorios em HTML com visual escuro na paleta Iron. Eles abrem direto no navegador e ficam mais faceis de ler do que arquivos simples de texto.
-
-Tambem foi adicionada uma memoria local de vagas vistas por 30 dias. Isso ajuda a evitar que a mesma vaga apareca de novo toda hora, inclusive considerando empresa, cargo e localizacao.
-
-### Parte 2 - Simulador ATS
-
-O app consegue simular como um filtro automatico de curriculos provavelmente leria seu PDF para uma vaga especifica.
-
-Ele mostra cobertura de palavras importantes, risco, pontos presentes, pontos ausentes e avisos quando o curriculo pode ter algum problema de leitura.
-
-### Parte 3 - Carta de apresentacao
-
-Depois de analisar uma vaga, o app pode gerar uma carta de apresentacao contextualizada para aquela oportunidade.
-
-A carta usa seu perfil, seu curriculo e a descricao da vaga. O app tambem avisa quando o texto ficou generico demais ou precisa de revisao.
-
-### Parte 4 - Controle de candidaturas
-
-O app ganhou uma aba **Candidaturas** para acompanhar as vagas em que voce se candidatou.
-
-Voce pode registrar uma vaga analisada, mover entre etapas, guardar contato, notas e proxima acao. O painel tambem mostra metricas simples e alertas de follow-up quando uma candidatura fica parada por muitos dias.
-
-### Parte 5 - Tendencias de mercado
-
-O app agora olha para o historico das vagas encontradas e gera um relatorio de mercado.
-
-Esse relatorio mostra tecnologias mais pedidas, senioridades mais comuns, modalidade de trabalho, empresas frequentes e possiveis lacunas entre o que o mercado pede e o que aparece no seu perfil.
-
-Ele evita retrabalho: vagas ja analisadas nao sao processadas de novo.
 
 ---
 
