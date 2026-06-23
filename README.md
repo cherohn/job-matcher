@@ -15,6 +15,8 @@ O Job Matcher busca vagas, calcula sua compatibilidade real e manda os melhores 
 
 *Gratuito · Sem instalacao · Traga suas proprias APIs*  **Requisito:** Windows 10 ou superior
 
+> O executavel ainda nao e assinado com certificado de code signing. Por isso, o Windows SmartScreen pode mostrar o aviso "Windows protected your PC" ao abrir o app baixado do ZIP. Para continuar, clique em **More info** e depois em **Run anyway**.
+
 </div>
 
 ---
@@ -238,6 +240,23 @@ Para gerar o executavel:
 powershell -ExecutionPolicy Bypass -File .\build_exe.ps1
 ```
 
+Para assinar o executavel, instale o Windows SDK para ter `signtool.exe` e use um certificado de code signing emitido por uma autoridade confiavel:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\sign_windows_release.ps1 -Thumbprint "THUMBPRINT_DO_CERTIFICADO"
+powershell -ExecutionPolicy Bypass -File .\tools\package_windows_release.ps1
+```
+
+Tambem e possivel assinar usando um arquivo `.pfx`:
+
+```powershell
+$env:SIGNTOOL_PFX_PASSWORD = "senha-do-pfx"
+powershell -ExecutionPolicy Bypass -File .\tools\sign_windows_release.ps1 -PfxPath "certificado.pfx"
+powershell -ExecutionPolicy Bypass -File .\tools\package_windows_release.ps1
+```
+
+Certificados autoassinados nao removem o alerta do SmartScreen para outros usuarios; eles servem apenas para testes locais.
+
 ---
 
 ## Estrutura do projeto
@@ -259,6 +278,9 @@ job-matcher/
 |-- notifier/
 |   `-- email_notifier.py
 |-- scrapers/
+|-- tools/
+|   |-- package_windows_release.ps1
+|   `-- sign_windows_release.ps1
 |-- GUIA_USUARIO.md
 |-- build_exe.ps1
 `-- requirements.txt
