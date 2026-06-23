@@ -74,16 +74,68 @@ Retorne SOMENTE JSON valido, sem markdown e sem texto extra:
 
 
 def _extract_json(text: str) -> dict:
+    stripped = text.strip()
     try:
-        return json.loads(text.strip())
+        return json.loads(stripped)
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        return json.loads(_escape_control_chars_in_strings(stripped))
     except json.JSONDecodeError:
         pass
 
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
-        return json.loads(match.group())
+        payload = match.group()
+        try:
+            return json.loads(payload)
+        except json.JSONDecodeError:
+            return json.loads(_escape_control_chars_in_strings(payload))
 
     raise ValueError(f"JSON invalido na resposta da carta: {text[:300]}")
+
+
+def _escape_control_chars_in_strings(text: str) -> str:
+    """Recover JSON where the model placed literal line breaks inside strings."""
+    chars = []
+    in_string = False
+    escaped = False
+
+    for char in text:
+        if in_string:
+            if escaped:
+                chars.append(char)
+                escaped = False
+                continue
+            if char == "\\":
+                chars.append(char)
+                escaped = True
+                continue
+            if char == '"':
+                chars.append(char)
+                in_string = False
+                continue
+            if char == "\n":
+                chars.append("\\n")
+                continue
+            if char == "\r":
+                chars.append("\\r")
+                continue
+            if char == "\t":
+                chars.append("\\t")
+                continue
+            if ord(char) < 0x20:
+                chars.append(f"\\u{ord(char):04x}")
+                continue
+            chars.append(char)
+            continue
+
+        chars.append(char)
+        if char == '"':
+            in_string = True
+
+    return "".join(chars)
 
 
 def _word_count(text: str) -> int:
@@ -124,7 +176,10 @@ def generate_cover_letter_text(
     response = client.chat.completions.create(
         model=model_name,
         messages=[
-            {"role": "system", "content": "Return only valid JSON. No markdown, no explanation."},
+            {
+                "role": "system",
+                "content": "Return only valid JSON. Escape line breaks inside string values as \\n. No markdown, no explanation.",
+            },
             {"role": "user", "content": prompt},
         ],
         temperature=0.4,

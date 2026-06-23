@@ -355,7 +355,7 @@ def run_scan(max_jobs_override=None, should_stop=None):
         log.info("Varredura interrompida antes da analise de compatibilidade.")
         return
 
-    log.info(f"Analisando compatibilidade de {len(jobs_to_analyze)} vaga(s) em uma unica chamada de IA.")
+    log.info(f"Analisando compatibilidade de {len(jobs_to_analyze)} vaga(s) em lotes menores de IA.")
     batch_results = calculate_matches_batch(
         profile_text=PROFILE,
         jobs=jobs_to_analyze,

@@ -44,7 +44,7 @@ Fluxo rapido pelo menu principal, busca, analise de vaga, otimizacao de curricul
 O app abre em um menu central, com status, atalhos para todas as areas e acoes rapidas. O menu usa a tela inteira e as telas internas usam uma barra lateral simples para navegar.
 
 ### Busca
-Configure quantas vagas analisar por varredura, defina o score minimo, rode uma busca pontual ou deixe o monitoramento ligado. A analise das vagas agora e feita em lote para economizar chamadas de IA.
+Configure quantas vagas analisar por varredura, defina o score minimo, rode uma busca pontual ou deixe o monitoramento ligado. A analise das vagas agora e feita em lotes menores para economizar chamadas de IA e reduzir falhas por respostas grandes demais.
 
 ### Analisar vaga
 Cole uma vaga especifica para receber score, veredito, pontos fortes, gaps e proximas acoes. Depois da analise, voce pode registrar a vaga em **Candidaturas**.
@@ -68,13 +68,14 @@ Mostra o historico local de varreduras, analises, otimizacoes, ATS, cartas e rel
 - Busca vagas no Google usando os termos e filtros que voce configurar.
 - Le e filtra o conteudo real das paginas de vaga.
 - Calcula um **score de compatibilidade** entre cada vaga e o seu curriculo/perfil usando IA.
-- Analisa as vagas da varredura em lote, com uma chamada de IA para varias vagas, reduzindo custo e saida de tokens.
+- Analisa as vagas da varredura em lotes menores de IA, reduzindo custo, saida de tokens e risco de resposta invalida.
 - Usa prompts com criterio senior para vaga, curriculo, ATS, carta e otimizacao.
 - Manda os melhores matches por **e-mail automaticamente** no intervalo definido.
 - Tem um **Menu principal** em tela cheia e uma barra lateral simples nas telas internas.
 - Analisa uma vaga colada manualmente na aba **Analisar vaga**.
 - Simula a leitura ATS do curriculo em PDF para uma vaga especifica.
 - Gera carta de apresentacao contextualizada para uma vaga especifica.
+- Recupera respostas de carta com multiplos paragrafos mesmo quando a IA retorna quebras de linha cruas dentro do JSON.
 - Registra candidaturas e acompanha o funil na aba **Candidaturas**.
 - Salva analises manuais em JSON e Markdown dentro de `reports/`.
 - Otimiza o direcionamento do curriculo para uma vaga especifica na aba **Otimizar curriculo**.
@@ -107,7 +108,8 @@ A otimizacao de curriculo sugere headline, resumo, skills e bullets com base no 
 - Janela de configuracao maior e redimensionavel.
 - GIF demonstrativo das 7 telas principais no README.
 - IA refinada para agir como analista senior em vagas, curriculo, ATS, cartas e otimizacao.
-- Varredura com **analise em lote**: o app busca as vagas primeiro e depois faz uma chamada de IA para avaliar varias vagas, mantendo uma porcentagem individual para cada uma.
+- Varredura com **analise em lotes menores**: o app busca as vagas primeiro e depois avalia grupos menores, mantendo uma porcentagem individual para cada vaga.
+- **Gerar carta** ficou mais robusto: agora o app recupera cartas com multiplos paragrafos quando a IA devolve quebras de linha cruas dentro do JSON.
 
 ---
 

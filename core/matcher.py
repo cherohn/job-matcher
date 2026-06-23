@@ -326,8 +326,50 @@ def calculate_matches_batch(
     groq_api_key: str,
     model_name: str = "llama-3.3-70b-versatile",
     use_local_fallback: bool = True,
+    batch_size: int = 5,
 ) -> dict[str, MatchResult]:
-    """Analyze many jobs in one LLM call and return results keyed by job id."""
+    """Analyze many jobs with small LLM batches and return results keyed by job id."""
+    if not jobs:
+        return {}
+
+    try:
+        batch_size = int(batch_size or 5)
+    except Exception:
+        batch_size = 5
+    batch_size = max(1, min(10, batch_size))
+
+    if len(jobs) <= batch_size:
+        return _calculate_matches_batch_once(
+            profile_text=profile_text,
+            jobs=jobs,
+            groq_api_key=groq_api_key,
+            model_name=model_name,
+            use_local_fallback=use_local_fallback,
+        )
+
+    results: dict[str, MatchResult] = {}
+    total_batches = (len(jobs) + batch_size - 1) // batch_size
+    for batch_index, start in enumerate(range(0, len(jobs), batch_size), start=1):
+        chunk = jobs[start:start + batch_size]
+        print(f"[MatcherBatch] Analisando lote {batch_index}/{total_batches} com {len(chunk)} vaga(s).")
+        results.update(_calculate_matches_batch_once(
+            profile_text=profile_text,
+            jobs=chunk,
+            groq_api_key=groq_api_key,
+            model_name=model_name,
+            use_local_fallback=use_local_fallback,
+        ))
+    return results
+
+
+def _calculate_matches_batch_once(
+    profile_text: str,
+    jobs: list[Any],
+    groq_api_key: str,
+    model_name: str = "llama-3.3-70b-versatile",
+    use_local_fallback: bool = True,
+) -> dict[str, MatchResult]:
+    """Analyze one small batch in one LLM call and return results keyed by job id."""
     prepared_jobs = []
     job_by_id = {}
     for index, job in enumerate(jobs, start=1):
