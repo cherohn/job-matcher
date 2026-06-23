@@ -44,7 +44,7 @@ Fluxo rapido pelo menu principal, busca, analise de vaga, otimizacao de curricul
 O app abre em um menu central, com status, atalhos para todas as areas e acoes rapidas. O menu usa a tela inteira e as telas internas usam uma barra lateral simples para navegar.
 
 ### Busca
-Configure quantas vagas analisar por varredura, defina o score minimo, rode uma busca pontual ou deixe o monitoramento ligado. A analise das vagas agora e feita em lotes menores para economizar chamadas de IA e reduzir falhas por respostas grandes demais.
+Configure quantas vagas analisar por varredura, defina o score minimo, rode uma busca pontual ou deixe o monitoramento ligado.
 
 ### Analisar vaga
 Cole uma vaga especifica para receber score, veredito, pontos fortes, gaps e proximas acoes. Depois da analise, voce pode registrar a vaga em **Candidaturas**.
@@ -68,7 +68,7 @@ Mostra o historico local de varreduras, analises, otimizacoes, ATS, cartas e rel
 - Busca vagas no Google usando os termos e filtros que voce configurar.
 - Le e filtra o conteudo real das paginas de vaga.
 - Calcula um **score de compatibilidade** entre cada vaga e o seu curriculo/perfil usando IA.
-- Analisa as vagas da varredura em lotes menores de IA, reduzindo custo, saida de tokens e risco de resposta invalida.
+- Analisa as vagas da varredura em lote, reduzindo custo e saida de tokens.
 - Usa prompts com criterio senior para vaga, curriculo, ATS, carta e otimizacao.
 - Manda os melhores matches por **e-mail automaticamente** no intervalo definido.
 - Tem um **Menu principal** em tela cheia e uma barra lateral simples nas telas internas.
@@ -103,13 +103,15 @@ A otimizacao de curriculo sugere headline, resumo, skills e bullets com base no 
 
 ## Novidades da versao 0.1.1
 
+- **Gerar carta** ficou mais robusto: agora o app recupera cartas com multiplos paragrafos quando a IA devolve quebras de linha cruas dentro do JSON.
+
+## Novidades da versao 0.1.0
+
 - Redesign do app com **Menu principal** em tela cheia.
 - Sidebar interna mais limpa para navegar entre as telas principais.
 - Janela de configuracao maior e redimensionavel.
 - GIF demonstrativo das 7 telas principais no README.
 - IA refinada para agir como analista senior em vagas, curriculo, ATS, cartas e otimizacao.
-- Varredura com **analise em lotes menores**: o app busca as vagas primeiro e depois avalia grupos menores, mantendo uma porcentagem individual para cada vaga.
-- **Gerar carta** ficou mais robusto: agora o app recupera cartas com multiplos paragrafos quando a IA devolve quebras de linha cruas dentro do JSON.
 
 ---
 
