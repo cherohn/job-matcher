@@ -31,8 +31,6 @@ Nao encontrei nada assim. Entao construi.
 
 ---
 
----
-
 ## Interface
 
 ### Demonstracao do app
@@ -272,8 +270,6 @@ job-matcher/
 - Se um site de vagas mudar a URL, a mesma vaga pode parecer nova.
 - A aba **Otimizar curriculo** gera texto e relatorio, mas ainda nao exporta DOCX/PDF.
 - A aba **Mercado** depende do historico de varreduras; se ainda houver poucas vagas salvas, o relatorio tambem sera pequeno.
-
----
 
 ---
 
