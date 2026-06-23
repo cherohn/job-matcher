@@ -327,16 +327,6 @@ job-matcher/
 
 ---
 
-## Roadmap
-
-- [ ] Exportacao DOCX/PDF para curriculos otimizados.
-- [ ] Instalador com setup guiado.
-- [ ] Mais fontes de busca alem do Google/Serper.
-- [ ] Deduplicacao mais robusta de vagas.
-- [ ] Agendamento em background sem precisar manter o app aberto.
-- [ ] Exportacao de relatorio em PDF.
-- [ ] Suporte a credenciais seguras fora do Windows.
-
 ---
 
 ## Aviso
